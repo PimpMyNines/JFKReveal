@@ -48,7 +48,7 @@ clean:
 
 build:
 	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install --upgrade build
+	$(PYTHON) -m pip install --upgrade buildJ33ps 
 	$(PYTHON) -m build
 
 test:
