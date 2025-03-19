@@ -1,5 +1,8 @@
 # JFKReveal - JFK Assassination Document Analysis
 
+> **⚠️ IMPORTANT NOTICE ⚠️**  
+> **This is a preliminary test version based on only a small sample (4 pages out of 7,000) of the JFK assassination documents. The analysis is incomplete and should not be considered accurate or comprehensive. A full version analyzing all declassified documents is currently in development and will be published when complete.**
+
 ## Overview
 
 JFKReveal is a tool that analyzes declassified documents from the National Archives to uncover evidence about the JFK assassination using advanced AI techniques and Retrieval Augmented Generation (RAG).
@@ -16,7 +19,9 @@ The following reports are available:
 
 ## Data Sources
 
-The analysis is based on more than 1,100 declassified documents from the National Archives JFK Collection. The documents were processed using AI to extract information, identify patterns, and generate insights.
+**TEST VERSION NOTE:** The current analysis is based on only 4 pages of documents from the National Archives JFK Collection, representing a tiny fraction of the available materials (approximately 7,000 pages in total). This version should be considered a technical demonstration only, not an accurate or comprehensive analysis.
+
+The documents were processed using AI to extract information, identify patterns, and generate insights. A complete analysis of all 7,000 pages is currently in progress and will be published when available.
 
 ## Methodology
 
@@ -34,4 +39,8 @@ The full source code and data are available in the [GitHub repository](https://g
 
 ## Disclaimer
 
-This tool is designed for educational and research purposes only. The analysis presents evidence-based conclusions but should not be considered definitive. All findings should be critically evaluated alongside other historical research.
+**⚠️ LIMITED TEST SAMPLE:** This current version was created using only 4 out of 7,000 pages of JFK-related documents as a technical proof of concept. The findings are NOT accurate, comprehensive, or representative of the full document collection.
+
+**COMING SOON:** All JFK-related documents are currently being processed, and a complete analysis will be published when finished. Please consider this version only as a demonstration of the methodology and technical approach.
+
+This tool is designed for educational and research purposes only. Even when the full version is complete, all findings should be critically evaluated alongside other historical research.
