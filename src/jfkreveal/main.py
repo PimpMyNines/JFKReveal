@@ -154,7 +154,7 @@ class JFKReveal:
         if not skip_scraping:
             self.scrape_documents()
         else:
-            logger.info("Skipping document scraping")
+            logger.info("Skipping document scraping, will use existing files")
         
         # Step 2: Process documents
         if not skip_processing:

@@ -39,6 +39,14 @@ class ArchivesGovScraper:
     """Scraper for the National Archives JFK Release 2025 collection."""
     
     BASE_URL = "https://www.archives.gov/research/jfk/release-2025"
+    # List of archive URLs containing JFK documents
+    ARCHIVE_URLS = [
+        "https://www.archives.gov/research/jfk/release-2025",
+        "https://www.archives.gov/research/jfk/release-2022",
+        "https://www.archives.gov/research/jfk/release-2021",
+        "https://www.archives.gov/research/jfk/2018-release", 
+        "https://www.archives.gov/research/jfk/2017-release"
+    ]
     
     def __init__(self, output_dir="data/raw", config: Optional[ScraperConfig] = None):
         """
@@ -256,19 +264,33 @@ class ArchivesGovScraper:
         Returns:
             tuple: (list of downloaded file paths, list of PDFDocument objects)
         """
-        pdf_links = self.extract_links()
-        logger.info(f"Found {len(pdf_links)} PDF documents")
+        # Collect links from all archive URLs
+        all_pdf_links = []
+        for archive_url in self.ARCHIVE_URLS:
+            logger.info(f"Extracting links from archive: {archive_url}")
+            pdf_links = self.extract_links(archive_url)
+            all_pdf_links.extend(pdf_links)
+            # Respect the site by adding a delay between archive pages
+            self._sleep_with_jitter()
+        
+        # Remove duplicates
+        all_pdf_links = list(set(all_pdf_links))
+        logger.info(f"Found {len(all_pdf_links)} PDF documents across all archives")
         
         downloaded_files = []
         documents = []
         
-        for url in tqdm(pdf_links, desc="Downloading PDFs"):
+        for url in tqdm(all_pdf_links, desc="Downloading PDFs"):
+            # Check if file already exists
+            filename = self._sanitize_filename(url)
+            output_path = os.path.join(self.output_dir, filename)
+            
             file_path = self.download_pdf(url)
             
             # Create document object
             document = PDFDocument(
                 url=url, 
-                filename=self._sanitize_filename(url),
+                filename=filename,
                 local_path=file_path,
                 downloaded=file_path is not None,
                 error=None if file_path else "Download failed"
