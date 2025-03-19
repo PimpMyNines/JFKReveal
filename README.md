@@ -109,6 +109,7 @@ For more detailed documentation:
 - [API Reference](docs/API_REFERENCE.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
 - [Technical Architecture](docs/ARCHITECTURE.md)
+- [Live Reports](https://pimpmynines.github.io/JFKReveal/)
 
 ## 📄 License
 
