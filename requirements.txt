@@ -1,0 +1,24 @@
+# Web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+tqdm>=4.66.1
+
+# PDF processing
+PyMuPDF>=1.22.5  # fitz
+nltk>=3.8.1
+
+# Vector database
+langchain>=0.1.0
+langchain-openai>=0.0.2
+langchain-chroma>=0.0.1
+chromadb>=0.4.18
+
+# OpenAI API
+openai>=1.3.0
+
+# Report generation
+markdown>=3.4.4
+
+# Visualization (optional)
+plotly>=5.18.0
+pandas>=2.1.1
