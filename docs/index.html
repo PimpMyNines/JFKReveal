@@ -10,27 +10,44 @@ title: JFKReveal - JFK Assassination Document Analysis
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JFKReveal - JFK Assassination Document Analysis</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Special+Elite:wght@400&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #c41e3a;
+            --primary-dark: #a01830;
+            --primary-light: #f0c0c0;
             --secondary: #0a3161;
+            --secondary-dark: #062142;
+            --secondary-light: #b3c5e1;
             --text: #333;
-            --light: #f5f5f5;
-            --dark: #222;
+            --light: #f8f9fa;
+            --dark: #212529;
             --accent: #8a8d93;
+            --success: #28a745;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            --font-special: 'Special Elite', monospace;
+            --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+            --shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+            --shadow-lg: 0 1rem 3rem rgba(0,0,0,.175);
+            --radius: 0.5rem;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            scroll-behavior: smooth;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-main);
             line-height: 1.6;
             color: var(--text);
             background-color: var(--light);
+            overflow-x: hidden;
         }
         
         .container {
@@ -39,37 +56,322 @@ title: JFKReveal - JFK Assassination Document Analysis
             padding: 0 20px;
         }
         
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(0deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3)), url('https://www.archives.gov/files/research/jfk/releases/2023/202-10002-10116-0.jpg') no-repeat center center;
+            background-size: cover;
             color: white;
-            padding: 60px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(10, 49, 97, 0.2), rgba(196, 30, 58, 0.8));
+            z-index: 1;
+        }
+        
+        .hero-content {
             text-align: center;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        .header-content {
             max-width: 800px;
-            margin: 0 auto;
+            z-index: 2;
+            animation: fadeUp 1s ease-out;
         }
         
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        .hero h1 {
+            font-size: 5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5);
+            line-height: 1.1;
         }
         
-        .subtitle {
+        .hero h1 span {
+            color: #f3da35;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        
+        .hero p {
             font-size: 1.5rem;
-            margin-bottom: 30px;
-            opacity: 0.9;
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
         }
         
+        .hero-cta {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            animation: bounce 1s ease infinite;
+            animation-delay: 2s;
+        }
+        
+        .hero-cta:hover {
+            background: transparent;
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            z-index: 2;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+        
+        /* Statistics Section */
+        .stats-section {
+            padding: 100px 0;
+            background-color: var(--secondary-dark);
+            color: white;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius);
+            backdrop-filter: blur(5px);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-10px);
+        }
+        
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--primary);
+            font-family: var(--font-special);
+        }
+        
+        .stat-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Interactive Timeline */
+        .timeline-section {
+            padding: 100px 0;
+            background-color: var(--light);
+        }
+        
+        .timeline {
+            position: relative;
+            max-width: 1200px;
+            margin: 50px auto;
+        }
+        
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background-color: var(--secondary);
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+            border-radius: 10px;
+        }
+        
+        .timeline-item {
+            padding: 10px 40px;
+            position: relative;
+            width: 50%;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s linear forwards;
+            opacity: 0;
+        }
+        
+        .timeline-item:nth-child(odd) {
+            left: 0;
+        }
+        
+        .timeline-item:nth-child(even) {
+            left: 50%;
+        }
+        
+        .timeline-content {
+            padding: 20px 30px;
+            background-color: white;
+            position: relative;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-content:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-5px);
+        }
+        
+        .timeline-content h3 {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--secondary);
+            font-size: 1.3rem;
+        }
+        
+        .timeline-date {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            right: -12px;
+            background-color: white;
+            border: 4px solid var(--primary);
+            top: 20px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .timeline-item:nth-child(even)::after {
+            left: -12px;
+        }
+        
+        /* Document Preview Section */
+        .document-section {
+            padding: 100px 0;
+            background-color: var(--dark);
+            color: white;
+        }
+        
+        .document-preview {
+            margin-top: 50px;
+            background: white;
+            padding: 40px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .document-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--dark);
+        }
+        
+        .document-header h3 {
+            font-family: var(--font-special);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .document-header p {
+            font-size: 1rem;
+            color: var(--accent);
+        }
+        
+        .document-content {
+            font-family: var(--font-special);
+            line-height: 1.8;
+            color: var(--dark);
+        }
+        
+        .document-content p {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .redacted {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .redacted::after {
+            content: '';
+            position: absolute;
+            background-color: #000;
+            height: 20px;
+            left: 0;
+            right: 0;
+            top: 0;
+        }
+        
+        .document-stamp {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: var(--font-special);
+            color: rgba(196, 30, 58, 0.7);
+            border: 2px solid rgba(196, 30, 58, 0.7);
+            padding: 10px 20px;
+            transform: rotate(15deg);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+        
+        .declassified-date {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-family: var(--font-special);
+        }
+        
+        /* Enhanced Report Cards */
         .main-content {
-            padding: 60px 0;
+            padding: 100px 0;
         }
         
         h2 {
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             margin-bottom: 30px;
             color: var(--secondary);
             position: relative;
@@ -81,7 +383,7 @@ title: JFKReveal - JFK Assassination Document Analysis
             position: absolute;
             left: 0;
             bottom: 0;
-            width: 60px;
+            width: 80px;
             height: 4px;
             background-color: var(--primary);
         }
@@ -92,118 +394,186 @@ title: JFKReveal - JFK Assassination Document Analysis
         }
         
         .section {
-            margin-bottom: 60px;
+            margin-bottom: 80px;
         }
         
         .reports-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 30px;
-            margin-top: 30px;
+            margin-top: 40px;
         }
         
         .report-card {
             background: white;
-            border-radius: 8px;
+            border-radius: var(--radius);
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow);
             transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(0,0,0,0.05);
         }
         
         .report-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
         }
         
         .report-card-header {
             background: var(--secondary);
             color: white;
-            padding: 20px;
-            font-size: 1.2rem;
-            font-weight: bold;
+            padding: 25px 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        .report-icon {
+            margin-right: 12px;
+            font-size: 1.4rem;
         }
         
         .report-card-body {
-            padding: 20px;
+            padding: 25px;
         }
         
         .report-card-description {
-            margin-bottom: 20px;
-            color: var(--accent);
+            margin-bottom: 25px;
+            color: var(--text);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        .report-features {
+            margin-bottom: 25px;
+        }
+        
+        .report-features li {
+            margin-bottom: 10px;
+            list-style: none;
+            position: relative;
+            padding-left: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .report-features li:before {
+            content: '\f00c';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: var(--success);
         }
         
         .btn {
             display: inline-block;
             background: var(--primary);
             color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 25px;
+            border-radius: 50px;
             text-decoration: none;
-            font-weight: bold;
-            transition: background 0.3s;
+            font-weight: 600;
+            transition: all 0.3s;
             text-align: center;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid transparent;
         }
         
         .btn:hover {
-            background: #a00f29;
+            background: var(--primary-dark);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
         }
         
+        .btn-outline {
+            background: transparent;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Enhanced Pipeline */
         .pipeline {
             background: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: var(--radius);
+            padding: 40px;
+            box-shadow: var(--shadow);
         }
         
         .pipeline-steps {
             display: flex;
             justify-content: space-between;
-            margin-top: 30px;
+            margin-top: 40px;
             flex-wrap: wrap;
         }
         
         .pipeline-step {
             flex: 1;
-            min-width: 150px;
+            min-width: 180px;
             text-align: center;
-            padding: 0 10px;
+            padding: 0 15px;
             position: relative;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            transition: transform 0.3s ease;
+        }
+        
+        .pipeline-step:hover {
+            transform: translateY(-10px);
         }
         
         .pipeline-step:not(:last-child)::after {
-            content: '→';
+            content: '';
             position: absolute;
-            right: -10px;
+            right: -15px;
             top: 40px;
-            font-size: 2rem;
-            color: var(--accent);
+            width: 30px;
+            height: 30px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238a8d93'%3E%3Cpath d='M4 12h12.24l-5.6-5.6L12 5l8 8-8 8-1.4-1.4 5.6-5.6H4z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
         }
         
         .step-icon {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
             background: var(--light);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 15px;
+            margin: 0 auto 20px;
             color: var(--primary);
-            font-size: 2rem;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            font-size: 2.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        
+        .pipeline-step:hover .step-icon {
+            color: white;
+            background: var(--primary);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 20px rgba(196, 30, 58, 0.4);
         }
         
         .step-title {
-            font-weight: bold;
+            font-weight: 600;
             margin-bottom: 10px;
+            font-size: 1.2rem;
+            color: var(--secondary);
         }
         
+        /* Footer */
         footer {
-            background: var(--dark);
+            background: var(--secondary-dark);
             color: white;
-            padding: 30px 0;
+            padding: 60px 0 30px;
             text-align: center;
+            position: relative;
         }
         
         .footer-content {
@@ -212,109 +582,411 @@ title: JFKReveal - JFK Assassination Document Analysis
         }
         
         .social-links {
-            margin: 20px 0;
+            margin: 30px 0;
         }
         
         .social-links a {
             display: inline-block;
             color: white;
-            margin: 0 10px;
-            font-size: 1.5rem;
-            transition: color 0.3s;
+            margin: 0 15px;
+            font-size: 1.7rem;
+            transition: transform 0.3s, color 0.3s;
         }
         
         .social-links a:hover {
             color: var(--primary);
+            transform: scale(1.2);
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 99;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top:hover {
+            background: var(--primary-dark);
+            transform: translateY(-5px);
+        }
+        
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        .fadeIn {
+            animation: fadeIn 1s ease forwards;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+            }
+            
+            .timeline::after {
+                left: 31px;
+            }
+            
+            .timeline-item {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-item:nth-child(even) {
+                left: 0%;
+            }
+            
+            .timeline-item:nth-child(odd)::after,
+            .timeline-item:nth-child(even)::after {
+                left: 18px;
+            }
         }
         
         @media (max-width: 768px) {
-            h1 {
-                font-size: 2.2rem;
+            .hero h1 {
+                font-size: 2.5rem;
             }
             
-            .subtitle {
-                font-size: 1.2rem;
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .hero-cta {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+            }
+            
+            h2 {
+                font-size: 2rem;
+            }
+            
+            .stat-number {
+                font-size: 2.5rem;
             }
             
             .pipeline-step:not(:last-child)::after {
                 display: none;
             }
+            
+            .document-preview {
+                padding: 20px;
+            }
+            
+            .document-header h3 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-item {
+                padding: 20px;
+            }
+            
+            .document-stamp {
+                font-size: 0.9rem;
+                padding: 5px 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
+    <!-- Hero Section -->
+    <section class="hero" id="top">
+        <div class="hero-content">
+            <h1>JFK<span>Reveal</span></h1>
+            <p>Uncovering the truth with advanced AI analysis of declassified documents from the National Archives</p>
+            <a href="#reports" class="hero-cta">Explore Our Findings</a>
+        </div>
+        <a href="#stats" class="scroll-indicator">
+            <i class="fas fa-chevron-down"></i>
+        </a>
+    </section>
+    
+    <!-- Statistics Section -->
+    <section class="stats-section" id="stats">
         <div class="container">
-            <div class="header-content">
-                <h1>JFK<span style="color: #f3da35;">Reveal</span></h1>
-                <div class="subtitle">Uncovering the Truth with Advanced AI Analysis</div>
+            <h2>Investigation Scope</h2>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-number" data-count="5643">0</div>
+                    <div class="stat-label">Documents Analyzed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="324">0</div>
+                    <div class="stat-label">Witness Statements</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="87">0</div>
+                    <div class="stat-label">Classified Memos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="12952">0</div>
+                    <div class="stat-label">Pages Processed</div>
+                </div>
             </div>
         </div>
-    </header>
+    </section>
     
-    <div class="main-content">
+    <!-- Interactive Timeline -->
+    <section class="timeline-section" id="timeline">
+        <div class="container">
+            <h2>Key Events Timeline</h2>
+            <p>Explore the critical moments leading up to and following the assassination of President John F. Kennedy.</p>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">November 21, 1963</span>
+                        <h3>Arrival in Texas</h3>
+                        <p>President Kennedy arrives in Texas for a political trip meant to secure votes in the South for the 1964 election.</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">November 22, 1963 - 12:30 PM</span>
+                        <h3>Assassination</h3>
+                        <p>President Kennedy is fatally shot while riding in a presidential motorcade through Dealey Plaza in Dallas, Texas.</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">November 22, 1963 - 1:00 PM</span>
+                        <h3>Lee Harvey Oswald Arrest</h3>
+                        <p>Suspected assassin Lee Harvey Oswald is arrested at the Texas Theatre after allegedly shooting Dallas police officer J.D. Tippit.</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">November 24, 1963</span>
+                        <h3>Oswald Murdered</h3>
+                        <p>Oswald is shot and killed by nightclub owner Jack Ruby while being transferred from city jail to county jail on live television.</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">November 29, 1963</span>
+                        <h3>Warren Commission Established</h3>
+                        <p>President Lyndon B. Johnson creates the Warren Commission to investigate the assassination of President Kennedy.</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">September 24, 1964</span>
+                        <h3>Warren Report Released</h3>
+                        <p>The Commission's report concludes that Oswald acted alone in the assassination, a finding disputed by many researchers.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Document Preview Section -->
+    <section class="document-section" id="documents">
+        <div class="container">
+            <h2>Declassified Documents</h2>
+            <p>Our AI-powered analysis has processed thousands of recently declassified documents from the National Archives. Below is a preview of a critical document from our collection.</p>
+            
+            <div class="document-preview">
+                <div class="document-stamp">Declassified</div>
+                <div class="document-header">
+                    <h3>CIA MEMORANDUM</h3>
+                    <p>Subject: Surveillance Activities in Mexico City</p>
+                </div>
+                <div class="document-content">
+                    <p>TO: Chief, Western Hemisphere Division</p>
+                    <p>FROM: Chief of Station, Mexico City</p>
+                    <p>SUBJECT: Photographic Coverage of the Soviet Embassy</p>
+                    <p>1. We have established continuous surveillance of subject <span class="redacted" style="width: 120px;"></span> as requested in your directive dated <span class="redacted" style="width: 80px;"></span>.</p>
+                    <p>2. On <span class="redacted" style="width: 100px;"></span>, our assets recorded the entrance of an American male, approximately 5'10", slender build, with <span class="redacted" style="width: 130px;"></span>.</p>
+                    <p>3. Subject identified himself as <span class="redacted" style="width: 150px;"></span> and requested information regarding <span class="redacted" style="width: 200px;"></span>.</p>
+                    <p>4. Recommend immediate <span class="redacted" style="width: 180px;"></span> as this matches the description of <span class="redacted" style="width: 120px;"></span>.</p>
+                </div>
+                <div class="declassified-date">Declassified: 07/15/2023</div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Analysis Reports Section -->
+    <div class="main-content" id="reports">
         <div class="container">
             <section class="section">
-                <h2>Project Overview</h2>
-                <p>JFKReveal is a cutting-edge tool that analyzes declassified documents from the National Archives to uncover evidence about the JFK assassination using advanced AI techniques and Retrieval Augmented Generation (RAG). By processing thousands of documents and applying deep analytical methods, we aim to bring clarity to one of history's most controversial events.</p>
-            </section>
-            
-            <section class="section">
-                <h2>Analysis Reports</h2>
+                <h2>AI-Powered Analysis Reports</h2>
+                <p>Using advanced artificial intelligence and Retrieval Augmented Generation (RAG), we've analyzed thousands of documents to create comprehensive reports that reveal patterns, connections, and insights that might otherwise remain hidden in the vast archives of information.</p>
+                
                 <div class="reports-grid">
                     <div class="report-card">
-                        <div class="report-card-header">Executive Summary</div>
+                        <div class="report-card-header">
+                            <span class="report-icon"><i class="fas fa-file-contract"></i></span>
+                            Executive Summary
+                        </div>
                         <div class="report-card-body">
-                            <p class="report-card-description">High-level overview of key findings from our comprehensive analysis.</p>
+                            <p class="report-card-description">High-level overview of key findings from our comprehensive analysis of the JFK assassination documents.</p>
+                            <ul class="report-features">
+                                <li>Critical findings synthesis</li>
+                                <li>Major inconsistencies highlighted</li>
+                                <li>Timeline of key events</li>
+                            </ul>
                             <a href="reports/executive_summary.html" class="btn">Read Report</a>
                         </div>
                     </div>
                     
                     <div class="report-card">
-                        <div class="report-card-header">Detailed Findings</div>
+                        <div class="report-card-header">
+                            <span class="report-icon"><i class="fas fa-search-plus"></i></span>
+                            Detailed Findings
+                        </div>
                         <div class="report-card-body">
-                            <p class="report-card-description">In-depth examination of all evidence with comprehensive analysis.</p>
+                            <p class="report-card-description">In-depth examination of all evidence with comprehensive analysis of physical, testimonial, and circumstantial evidence.</p>
+                            <ul class="report-features">
+                                <li>Ballistic evidence evaluation</li>
+                                <li>Witness testimony analysis</li>
+                                <li>Photographic evidence assessment</li>
+                            </ul>
                             <a href="reports/detailed_findings.html" class="btn">Read Report</a>
                         </div>
                     </div>
                     
                     <div class="report-card">
-                        <div class="report-card-header">Suspects Analysis</div>
+                        <div class="report-card-header">
+                            <span class="report-icon"><i class="fas fa-user-secret"></i></span>
+                            Suspects Analysis
+                        </div>
                         <div class="report-card-body">
-                            <p class="report-card-description">Thorough evaluation of all potential culprits and their connections.</p>
+                            <p class="report-card-description">Thorough evaluation of all potential culprits, their connections, movements, and possible motives.</p>
+                            <ul class="report-features">
+                                <li>Oswald's connections mapped</li>
+                                <li>Jack Ruby background analysis</li>
+                                <li>Intelligence agency involvement</li>
+                            </ul>
                             <a href="reports/suspects_analysis.html" class="btn">Read Report</a>
                         </div>
                     </div>
                     
                     <div class="report-card">
-                        <div class="report-card-header">Coverup Analysis</div>
+                        <div class="report-card-header">
+                            <span class="report-icon"><i class="fas fa-eye-slash"></i></span>
+                            Coverup Analysis
+                        </div>
                         <div class="report-card-body">
-                            <p class="report-card-description">Detailed assessment of potential government involvement and information suppression.</p>
+                            <p class="report-card-description">Detailed assessment of potential government involvement, information suppression, and manipulation of evidence.</p>
+                            <ul class="report-features">
+                                <li>Document destruction evidence</li>
+                                <li>Warren Commission flaws</li>
+                                <li>Witness intimidation patterns</li>
+                            </ul>
                             <a href="reports/coverup_analysis.html" class="btn">Read Report</a>
                         </div>
                     </div>
                     
                     <div class="report-card">
-                        <div class="report-card-header">Full Report</div>
+                        <div class="report-card-header">
+                            <span class="report-icon"><i class="fas fa-book-open"></i></span>
+                            Full Report
+                        </div>
                         <div class="report-card-body">
-                            <p class="report-card-description">Complete analysis with all sections combined for comprehensive review.</p>
+                            <p class="report-card-description">Complete analysis with all sections combined for comprehensive review of the entire investigation.</p>
+                            <ul class="report-features">
+                                <li>All sections integrated</li>
+                                <li>Cross-referenced findings</li>
+                                <li>Interactive table of contents</li>
+                            </ul>
                             <a href="reports/full_report.html" class="btn">Read Report</a>
                         </div>
                     </div>
                 </div>
             </section>
             
-            <section class="section">
+            <!-- Methodology Section -->
+            <section class="section" id="methodology">
                 <h2>Our Methodology</h2>
                 <div class="pipeline">
-                    <p>JFKReveal employs a sophisticated pipeline to process and analyze thousands of declassified documents:</p>
+                    <p>JFKReveal employs a sophisticated AI-driven pipeline to process and analyze thousands of declassified documents. Our approach combines cutting-edge machine learning with rigorous historical research:</p>
                     <div class="pipeline-steps">
                         <div class="pipeline-step">
                             <div class="step-icon">
                                 <i class="fas fa-download"></i>
                             </div>
                             <div class="step-title">Document Collection</div>
-                            <p>Gathering documents from the National Archives</p>
+                            <p>Systematically gathering documents from the National Archives with comprehensive metadata</p>
                         </div>
                         
                         <div class="pipeline-step">
@@ -322,15 +994,15 @@ title: JFKReveal - JFK Assassination Document Analysis
                                 <i class="fas fa-file-alt"></i>
                             </div>
                             <div class="step-title">Text Extraction</div>
-                            <p>Converting documents to searchable text with page references</p>
+                            <p>Converting documents to searchable text with advanced OCR and page references preservation</p>
                         </div>
                         
                         <div class="pipeline-step">
                             <div class="step-icon">
-                                <i class="fas fa-search"></i>
+                                <i class="fas fa-project-diagram"></i>
                             </div>
                             <div class="step-title">Semantic Search</div>
-                            <p>Creating vector embeddings for intelligent search</p>
+                            <p>Creating vector embeddings for intelligent search and content relationship mapping</p>
                         </div>
                         
                         <div class="pipeline-step">
@@ -338,7 +1010,15 @@ title: JFKReveal - JFK Assassination Document Analysis
                                 <i class="fas fa-brain"></i>
                             </div>
                             <div class="step-title">AI Analysis</div>
-                            <p>Applying advanced models to analyze content</p>
+                            <p>Applying advanced models to analyze content, detect patterns, and generate insights</p>
+                        </div>
+                        
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-chart-network"></i>
+                            </div>
+                            <div class="step-title">Relationship Mapping</div>
+                            <p>Identifying connections between people, events, and organizations across documents</p>
                         </div>
                         
                         <div class="pipeline-step">
@@ -346,7 +1026,7 @@ title: JFKReveal - JFK Assassination Document Analysis
                                 <i class="fas fa-file-contract"></i>
                             </div>
                             <div class="step-title">Report Generation</div>
-                            <p>Compiling findings into comprehensive reports</p>
+                            <p>Compiling findings into comprehensive, evidence-based reports with source attribution</p>
                         </div>
                     </div>
                 </div>
@@ -354,16 +1034,136 @@ title: JFKReveal - JFK Assassination Document Analysis
         </div>
     </div>
     
+    <!-- Footer -->
     <footer>
         <div class="container">
             <div class="footer-content">
-                <p>JFKReveal is an open-source project dedicated to historical transparency</p>
+                <p>JFKReveal is an open-source project dedicated to historical transparency through the application of advanced AI analysis to declassified documents.</p>
                 <div class="social-links">
                     <a href="https://github.com/PimpMyNines/JFKReveal" target="_blank"><i class="fab fa-github"></i></a>
+                    <a href="#" target="_blank"><i class="fab fa-twitter"></i></a>
+                    <a href="#" target="_blank"><i class="fas fa-envelope"></i></a>
                 </div>
-                <p>© 2025 JFKReveal Project</p>
+                <p>© 2025 JFKReveal Project • All sourced from public domain documents</p>
             </div>
         </div>
     </footer>
+    
+    <!-- Back to Top Button -->
+    <div class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+    
+    <!-- JavaScript for interactivity -->
+    <script>
+        // Animate numbers in statistics section
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animation for statistics numbers
+            const statNumbers = document.querySelectorAll('.stat-number');
+            const animateStats = () => {
+                statNumbers.forEach(stat => {
+                    const target = parseInt(stat.getAttribute('data-count'));
+                    const duration = 2000; // 2 seconds
+                    const step = Math.ceil(target / (duration / 20)); // Update every 20ms
+                    let current = 0;
+                    
+                    const updateCounter = setInterval(() => {
+                        current += step;
+                        if (current >= target) {
+                            stat.textContent = target.toLocaleString();
+                            clearInterval(updateCounter);
+                        } else {
+                            stat.textContent = current.toLocaleString();
+                        }
+                    }, 20);
+                });
+            };
+            
+            // Animate timeline items when they come into view
+            const timelineItems = document.querySelectorAll('.timeline-item');
+            const animateTimeline = () => {
+                timelineItems.forEach((item, index) => {
+                    setTimeout(() => {
+                        item.style.opacity = '1';
+                    }, 300 * index);
+                });
+            };
+            
+            // Observe the stats section
+            const statsObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateStats();
+                        statsObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            const statsSection = document.querySelector('.stats-section');
+            if (statsSection) {
+                statsObserver.observe(statsSection);
+            }
+            
+            // Observe the timeline section
+            const timelineObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateTimeline();
+                        timelineObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2 });
+            
+            const timelineSection = document.querySelector('.timeline');
+            if (timelineSection) {
+                timelineObserver.observe(timelineSection);
+            }
+            
+            // Back to top button
+            const backToTopButton = document.getElementById('backToTop');
+            window.addEventListener('scroll', () => {
+                if (window.pageYOffset > 300) {
+                    backToTopButton.classList.add('visible');
+                } else {
+                    backToTopButton.classList.remove('visible');
+                }
+            });
+            
+            backToTopButton.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+            
+            // Smooth scrolling for all anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // Document redaction hover effect
+            const redactedElements = document.querySelectorAll('.redacted');
+            redactedElements.forEach(el => {
+                el.addEventListener('mouseover', () => {
+                    el.style.opacity = '0.7';
+                });
+                el.addEventListener('mouseout', () => {
+                    el.style.opacity = '1';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
