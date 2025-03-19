@@ -40,14 +40,20 @@ class VectorStore:
         
         # Get embedding model from parameter, env var, or use default
         if embedding_model is None:
-            embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+            embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
         
-        # Since OpenAI embeddings are having issues with this account,
-        # we're using FakeEmbeddings which provide deterministic but not semantic embeddings
-        # This will work for testing purposes
-        logger.info("Using FakeEmbeddings for testing purposes")
-        self.embedding_function = FakeEmbeddings(size=384)  # Match existing Chroma database dimension
-        logger.info("Successfully initialized FakeEmbeddings")
+        # Use OpenAI embeddings with the specified model
+        try:
+            self.embedding_function = OpenAIEmbeddings(
+                model=embedding_model,
+                openai_api_key=openai_api_key
+            )
+            logger.info(f"Successfully initialized OpenAI embeddings with model: {embedding_model}")
+        except Exception as e:
+            logger.error(f"Error initializing OpenAI embeddings: {e}")
+            logger.warning("Falling back to FakeEmbeddings for testing purposes")
+            self.embedding_function = FakeEmbeddings(size=1536)  # Dimension for OpenAI embeddings
+            logger.info("Successfully initialized FakeEmbeddings")
         
         # Create or load vector store
         self.vector_store = Chroma(

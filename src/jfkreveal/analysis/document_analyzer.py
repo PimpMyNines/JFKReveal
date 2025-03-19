@@ -117,6 +117,7 @@ class DocumentAnalyzer:
             api_key=openai_api_key,
             max_retries=max_retries,
         )
+        logger.info(f"Initialized OpenAI model: {model_name}")
         
         # Initialize output parsers
         self.json_parser = JsonOutputParser()

@@ -37,5 +37,5 @@ jobs:
       env:
         # Use a dummy key for testing
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-key-for-testing' }}
-        OPENAI_EMBEDDING_MODEL: 'text-embedding-ada-002'
-        OPENAI_ANALYSIS_MODEL: 'gpt-3.5-turbo'
+        OPENAI_EMBEDDING_MODEL: 'text-embedding-3-large'
+        OPENAI_ANALYSIS_MODEL: 'gpt-4.5-preview'
