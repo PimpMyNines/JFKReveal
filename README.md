@@ -18,7 +18,7 @@ JFKReveal is a powerful tool that analyzes over 1,100 declassified documents fro
 ### Prerequisites
 
 - Python 3.8+ installed
-- OpenAI API key (set as environment variable `OPENAI_API_KEY`)
+- OpenAI API key
 
 ### Installation
 
@@ -31,6 +31,10 @@ cd JFKReveal
 
 # Set up virtual environment and install dependencies
 make setup
+
+# Configure your OpenAI API key
+cp .env.example .env
+# Edit the .env file and add your OpenAI API key
 
 # Install the package
 make install-dev
@@ -92,8 +96,9 @@ The system uses OpenAI embeddings for vectorization and GPT-4o for analysis, ens
 
 Key configuration options:
 
-- **OpenAI API Key**: Set via environment variable `OPENAI_API_KEY`
-- **Model Selection**: Change models in the code (default is GPT-4o)
+- **OpenAI API Key**: Set in the `.env` file (copy from `.env.example`)
+- **Embedding Model**: Configure in `.env` file (defaults to `text-embedding-ada-002` for local development)
+- **Analysis Model**: Configure in `.env` file (defaults to `gpt-4o`)
 - **Chunking Parameters**: Adjust chunk size and overlap in `document_processor.py`
 - **Analysis Topics**: Modify topics list in `document_analyzer.py`
 

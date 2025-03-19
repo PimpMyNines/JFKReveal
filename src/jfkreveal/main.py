@@ -5,7 +5,11 @@ import os
 import sys
 import logging
 import argparse
+import dotenv
 from typing import Optional
+
+# Load environment variables from .env file if it exists
+dotenv.load_dotenv()
 
 from .scrapers.archives_gov import ArchivesGovScraper
 from .database.document_processor import DocumentProcessor
@@ -77,30 +81,42 @@ class JFKReveal:
         logger.info(f"Completed document processing, processed {len(processed_files)} files")
         return processed_files
     
-    def build_vector_database(self):
+    def build_vector_database(self) -> Optional[VectorStore]:
         """Build the vector database from processed documents."""
         logger.info("Starting vector database build")
         
-        vector_store = VectorStore(
-            persist_directory=os.path.join(self.base_dir, "data/vectordb"),
-            openai_api_key=self.openai_api_key
-        )
-        
-        total_chunks = vector_store.add_all_documents(
-            processed_dir=os.path.join(self.base_dir, "data/processed")
-        )
-        
-        logger.info(f"Completed vector database build, added {total_chunks} chunks")
-        return vector_store
+        try:
+            vector_store = VectorStore(
+                persist_directory=os.path.join(self.base_dir, "data/vectordb"),
+                openai_api_key=self.openai_api_key
+            )
+            
+            total_chunks = vector_store.add_all_documents(
+                processed_dir=os.path.join(self.base_dir, "data/processed")
+            )
+            
+            logger.info(f"Completed vector database build, added {total_chunks} chunks")
+            return vector_store
+            
+        except Exception as e:
+            logger.error(f"Failed to build vector database: {e}")
+            logger.error("Skipping vector database build and analysis steps")
+            return None
     
     def analyze_documents(self, vector_store):
         """Analyze documents and generate topic analyses."""
         logger.info("Starting document analysis")
         
+        # Get model name from environment variables if set
+        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+        
         analyzer = DocumentAnalyzer(
             vector_store=vector_store,
             output_dir=os.path.join(self.base_dir, "data/analysis"),
-            openai_api_key=self.openai_api_key
+            model_name=model_name,
+            openai_api_key=self.openai_api_key,
+            temperature=0.0,
+            max_retries=5
         )
         
         topic_analyses = analyzer.analyze_key_topics()
@@ -123,13 +139,14 @@ class JFKReveal:
         logger.info("Completed report generation")
         return report
     
-    def run_pipeline(self, skip_scraping=False, skip_processing=False):
+    def run_pipeline(self, skip_scraping=False, skip_processing=False, skip_analysis=False):
         """
         Run the complete document analysis pipeline.
         
         Args:
             skip_scraping: Skip document scraping
             skip_processing: Skip document processing
+            skip_analysis: Skip document analysis
         """
         logger.info("Starting JFK documents analysis pipeline")
         
@@ -146,19 +163,32 @@ class JFKReveal:
             logger.info("Skipping document processing")
         
         # Step 3: Build vector database
-        vector_store = self.build_vector_database()
-        
-        # Step 4: Analyze documents
-        self.analyze_documents(vector_store)
+        if not skip_analysis:
+            vector_store = self.build_vector_database()
+            
+            # Step 4: Analyze documents if vector store was created successfully
+            if vector_store is not None:
+                self.analyze_documents(vector_store)
+            else:
+                logger.warning("Skipping analysis phase due to vector store initialization failure")
+                skip_analysis = True
+        else:
+            logger.info("Skipping vector database build and analysis")
         
         # Step 5: Generate report
-        self.generate_report()
+        if not skip_analysis:
+            self.generate_report()
+            # Print final report location
+            report_path = os.path.join(self.base_dir, "data/reports/full_report.html")
+            logger.info(f"Final report available at: {report_path}")
+        else:
+            # Create a dummy report or use an existing one
+            report_path = os.path.join(self.base_dir, "data/reports/dummy_report.html")
+            with open(report_path, "w") as f:
+                f.write("<html><body><h1>JFK Document Analysis Report</h1><p>Analysis phase was skipped.</p></body></html>")
+            logger.info(f"Created dummy report at: {report_path}")
         
         logger.info("Completed JFK documents analysis pipeline")
-        
-        # Print final report location
-        report_path = os.path.join(self.base_dir, "data/reports/full_report.html")
-        logger.info(f"Final report available at: {report_path}")
         
         return report_path
 
@@ -175,6 +205,8 @@ def main():
                         help="Skip document scraping")
     parser.add_argument("--skip-processing", action="store_true",
                         help="Skip document processing")
+    parser.add_argument("--skip-analysis", action="store_true",
+                        help="Skip document analysis and report generation")
     
     args = parser.parse_args()
     
@@ -186,7 +218,8 @@ def main():
     
     report_path = jfk_reveal.run_pipeline(
         skip_scraping=args.skip_scraping,
-        skip_processing=args.skip_processing
+        skip_processing=args.skip_processing,
+        skip_analysis=args.skip_analysis
     )
     
     print(f"\nAnalysis complete! Final report available at: {report_path}")

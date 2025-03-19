@@ -1,20 +1,71 @@
 """
-Document analyzer using OpenAI to extract and analyze information.
+Document analyzer using LangChain and OpenAI to extract and analyze information.
 """
 import os
 import json
 import logging
 from typing import List, Dict, Any, Optional, Union
 
-from openai import OpenAI
+from pydantic import BaseModel, Field
 from tqdm import tqdm
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.output_parsers.json import JsonOutputParser
+from langchain_core.exceptions import LangChainException
 
 from ..database.vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 
+class DocumentAnalysisItem(BaseModel):
+    """A single item of analysis with the supporting text."""
+    information: str = Field(..., description="The extracted information")
+    quote: str = Field(..., description="The quote from the document supporting this information")
+    page: Optional[str] = Field(None, description="The page number where this information was found")
+
+class DocumentAnalysisResult(BaseModel):
+    """Results of analyzing a document chunk."""
+    key_individuals: List[DocumentAnalysisItem] = Field(default_factory=list, description="Key individuals mentioned")
+    government_agencies: List[DocumentAnalysisItem] = Field(default_factory=list, description="Government agencies mentioned")
+    locations: List[DocumentAnalysisItem] = Field(default_factory=list, description="Locations mentioned")
+    dates_and_times: List[DocumentAnalysisItem] = Field(default_factory=list, description="Dates and times mentioned")
+    potential_coverup: List[DocumentAnalysisItem] = Field(default_factory=list, description="Potential evidence of coverup")
+    suspicious_activities: List[DocumentAnalysisItem] = Field(default_factory=list, description="Suspicious activities mentioned")
+    assassination_theories: List[DocumentAnalysisItem] = Field(default_factory=list, description="Connections to assassination theories")
+    inconsistencies: List[DocumentAnalysisItem] = Field(default_factory=list, description="Inconsistencies in the document")
+    weapons_references: List[DocumentAnalysisItem] = Field(default_factory=list, description="References to weapons")
+    redacted_information: List[DocumentAnalysisItem] = Field(default_factory=list, description="Missing or redacted information")
+
+class AnalyzedDocument(BaseModel):
+    """A document that has been analyzed."""
+    text: str = Field(..., description="The text of the document chunk")
+    metadata: Dict[str, Any] = Field(..., description="Metadata for the document")
+    analysis: DocumentAnalysisResult = Field(..., description="Analysis results")
+    error: Optional[str] = Field(None, description="Error message if analysis failed")
+
+class TopicSummary(BaseModel):
+    """Summary of analysis for a specific topic."""
+    key_findings: List[str] = Field(default_factory=list, description="Key findings from document analysis")
+    consistent_information: List[str] = Field(default_factory=list, description="Information that appears in multiple sources")
+    contradictions: List[str] = Field(default_factory=list, description="Contradictions between documents")
+    potential_evidence: List[str] = Field(default_factory=list, description="Potential evidence of coverup")
+    missing_information: List[str] = Field(default_factory=list, description="Notable gaps in information")
+    assassination_theories: List[str] = Field(default_factory=list, description="Connections to assassination theories")
+    credibility: str = Field(description="Level of credibility of the information (high, medium, or low)")
+    document_references: Dict[str, List[str]] = Field(default_factory=dict, description="Document references for key claims")
+
+class TopicAnalysis(BaseModel):
+    """Complete analysis of a topic including all document analyses and summary."""
+    topic: str = Field(..., description="The topic analyzed")
+    summary: TopicSummary = Field(..., description="Summary of findings")
+    document_analyses: List[AnalyzedDocument] = Field(..., description="Individual document analyses")
+    num_documents: int = Field(..., description="Number of documents analyzed")
+    error: Optional[str] = Field(None, description="Error message if analysis failed")
+
 class DocumentAnalyzer:
-    """Analyze JFK documents using OpenAI models."""
+    """Analyze JFK documents using LangChain and OpenAI models."""
     
     # Categories and topics of interest
     ANALYSIS_CATEGORIES = [
@@ -34,8 +85,10 @@ class DocumentAnalyzer:
         self,
         vector_store: VectorStore,
         output_dir: str = "data/analysis",
-        model: str = "gpt-4o",
+        model_name: str = "gpt-4o",
         openai_api_key: Optional[str] = None,
+        temperature: float = 0.0,
+        max_retries: int = 5,
     ):
         """
         Initialize the document analyzer.
@@ -43,94 +96,118 @@ class DocumentAnalyzer:
         Args:
             vector_store: Vector store instance for searching documents
             output_dir: Directory to save analysis results
-            model: OpenAI model to use for analysis
+            model_name: OpenAI model to use for analysis
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            temperature: Temperature for LLM generation
+            max_retries: Maximum number of retries for API calls
         """
         self.vector_store = vector_store
         self.output_dir = output_dir
-        self.model = model
+        self.model_name = model_name
+        self.temperature = temperature
+        self.max_retries = max_retries
         
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
         
-        # Initialize OpenAI client
-        self.client = OpenAI(api_key=openai_api_key)
+        # Initialize LangChain model
+        self.llm = ChatOpenAI(
+            model=model_name,
+            temperature=temperature,
+            api_key=openai_api_key,
+            max_retries=max_retries,
+        )
+        
+        # Initialize output parsers
+        self.json_parser = JsonOutputParser()
     
-    def analyze_document_chunk(self, chunk: Dict[str, Any]) -> Dict[str, Any]:
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=1, max=60),
+        retry=retry_if_exception_type(LangChainException)
+    )
+    def analyze_document_chunk(self, chunk: Dict[str, Any]) -> AnalyzedDocument:
         """
-        Analyze a single document chunk with OpenAI.
+        Analyze a single document chunk with LangChain and OpenAI.
         
         Args:
             chunk: Document chunk (text and metadata)
             
         Returns:
-            Analysis results
+            AnalyzedDocument: Analysis results
         """
         text = chunk["text"]
         metadata = chunk["metadata"]
         
-        prompt = f"""
-        You are an expert analyst examining declassified JFK assassination documents.
-        Analyze the following document excerpt carefully for any significant information
-        related to the JFK assassination, potential coverups, or government involvement.
-        
-        DOCUMENT EXCERPT:
-        {text}
-        
-        For each of the following categories, extract any relevant information from the text:
-        
-        1. Key individuals mentioned (include full names and roles if available)
-        2. Government agencies or organizations mentioned
-        3. Locations mentioned
-        4. Dates and times mentioned
-        5. Potential evidence of coverup or conspiracy (be objective and factual)
-        6. Suspicious activities or events described
-        7. Connections to known assassination theories
-        8. Inconsistencies or contradictions in the account
-        9. References to weapons, bullet trajectory, or cause of death
-        10. Missing or redacted information (what seems to be deliberately omitted)
-        
-        FORMAT YOUR RESPONSE AS JSON with these categories as keys.
-        If there is no relevant information for a category, use an empty list.
-        For each piece of information, include the exact quote from the document.
-        """
+        # Create prompt template
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are an expert analyst examining declassified JFK assassination documents. Extract information in the requested JSON format."),
+            ("human", """
+            Analyze the following document excerpt carefully for any significant information
+            related to the JFK assassination, potential coverups, or government involvement.
+            
+            DOCUMENT EXCERPT:
+            {text}
+            
+            For each of the following categories, extract any relevant information from the text:
+            
+            1. key_individuals: Key individuals mentioned (include full names and roles if available)
+            2. government_agencies: Government agencies or organizations mentioned
+            3. locations: Locations mentioned
+            4. dates_and_times: Dates and times mentioned
+            5. potential_coverup: Potential evidence of coverup or conspiracy (be objective and factual)
+            6. suspicious_activities: Suspicious activities or events described
+            7. assassination_theories: Connections to known assassination theories
+            8. inconsistencies: Inconsistencies or contradictions in the account
+            9. weapons_references: References to weapons, bullet trajectory, or cause of death
+            10. redacted_information: Missing or redacted information (what seems to be deliberately omitted)
+            
+            For each item found, include the information, the exact quote from the document, and the page number if available.
+            
+            Format as JSON with these exact field names matching the categories above.
+            For categories with no relevant information, include an empty array.
+            """)
+        ])
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert analyst examining declassified JFK assassination documents. Respond only with the requested JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.0,
-                response_format={"type": "json_object"}
+            # Create chain and run with function calling method
+            chain = prompt_template | self.llm.with_structured_output(
+                DocumentAnalysisResult,
+                method="function_calling"  # Use function calling method to fix schema issues
             )
             
-            analysis = json.loads(response.choices[0].message.content)
+            # Run the chain
+            analysis_result = chain.invoke({"text": text})
             
-            # Add document metadata
-            result = {
-                "analysis": analysis,
-                "metadata": metadata,
-                "text": text
-            }
+            # Create analysis document
+            analyzed_doc = AnalyzedDocument(
+                text=text,
+                metadata=metadata,
+                analysis=analysis_result
+            )
             
-            return result
+            return analyzed_doc
             
         except Exception as e:
             logger.error(f"Error analyzing chunk {metadata.get('chunk_id', 'unknown')}: {e}")
-            return {
-                "analysis": {},
-                "metadata": metadata,
-                "text": text,
-                "error": str(e)
-            }
+            # Return error document
+            return AnalyzedDocument(
+                text=text,
+                metadata=metadata,
+                analysis=DocumentAnalysisResult(),
+                error=str(e)
+            )
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=60),
+        retry=retry_if_exception_type(LangChainException)
+    )
     def search_and_analyze_topic(
         self, 
         topic: str, 
         num_results: int = 20
-    ) -> Dict[str, Any]:
+    ) -> TopicAnalysis:
         """
         Search for a topic and analyze relevant documents.
         
@@ -139,7 +216,7 @@ class DocumentAnalyzer:
             num_results: Number of relevant documents to analyze
             
         Returns:
-            Topic analysis results
+            TopicAnalysis: Topic analysis results
         """
         logger.info(f"Analyzing topic: {topic}")
         
@@ -147,62 +224,74 @@ class DocumentAnalyzer:
         results = self.vector_store.similarity_search(topic, k=num_results)
         
         # Analyze each document chunk
-        analyses = []
+        analyzed_docs = []
         for chunk in tqdm(results, desc=f"Analyzing {topic}"):
-            analysis = self.analyze_document_chunk(chunk)
-            analyses.append(analysis)
+            analyzed_doc = self.analyze_document_chunk(chunk)
+            analyzed_docs.append(analyzed_doc)
         
-        # Create overall topic analysis using OpenAI
-        prompt = f"""
-        You are an expert analyst examining declassified JFK assassination documents.
-        
-        You've analyzed multiple document excerpts related to: {topic}
-        
-        Based on the following document analyses, provide a comprehensive summary
-        of the evidence and information related to this topic. Be objective and factual.
-        
-        DOCUMENT ANALYSES:
-        {json.dumps(analyses, indent=2)}
-        
-        Your response should include:
-        1. Key findings and patterns across documents
-        2. Consistent information that appears in multiple sources
-        3. Contradictions or inconsistencies between documents
-        4. Potential evidence of coverup or conspiracy (be objective)
-        5. Notable gaps or missing information
-        6. Connections to known assassination theories
-        7. Level of credibility of the information (high, medium, low)
-        8. Specific document references for key claims (use document_id from metadata)
-        
-        FORMAT YOUR RESPONSE AS JSON with these categories as keys.
-        For key points, include document references to support claims.
-        """
+        # Create overall topic analysis prompt
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are an expert analyst examining declassified JFK assassination documents. Summarize findings across multiple document analyses."),
+            ("human", """
+            You've analyzed multiple document excerpts related to: {topic}
+            
+            Based on the analyzed documents, provide a comprehensive summary of the evidence and information.
+            Be objective and factual.
+            
+            Your response should include:
+            1. key_findings: Key findings and patterns across documents
+            2. consistent_information: Information that appears in multiple sources
+            3. contradictions: Contradictions or inconsistencies between documents
+            4. potential_evidence: Potential evidence of coverup or conspiracy (be objective)
+            5. missing_information: Notable gaps or missing information 
+            6. assassination_theories: Connections to known assassination theories
+            7. credibility: Level of credibility of the information (high, medium, low)
+            8. document_references: Document references for key claims (use document_id from metadata)
+            
+            Include specific document references to support claims where possible.
+            """)
+        ])
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert analyst examining declassified JFK assassination documents. Respond only with the requested JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.0,
-                response_format={"type": "json_object"}
+            # Create chain and run with function calling method
+            chain = prompt_template | self.llm.with_structured_output(
+                TopicSummary,
+                method="function_calling"  # Use function calling method to fix schema issues
             )
             
-            summary = json.loads(response.choices[0].message.content)
+            # Prepare document info for summary
+            doc_summaries = []
+            for doc in analyzed_docs:
+                doc_summary = {
+                    "document_id": doc.metadata.get("document_id", "unknown"),
+                    "title": doc.metadata.get("title", ""),
+                    "key_findings": [item.information for sublist in [
+                        doc.analysis.key_individuals,
+                        doc.analysis.government_agencies,
+                        doc.analysis.suspicious_activities,
+                        doc.analysis.potential_coverup
+                    ] for item in sublist]
+                }
+                doc_summaries.append(doc_summary)
+            
+            # Run the chain
+            summary = chain.invoke({
+                "topic": topic,
+                "documents": doc_summaries
+            })
             
             # Complete topic analysis
-            topic_analysis = {
-                "topic": topic,
-                "summary": summary,
-                "document_analyses": analyses,
-                "num_documents": len(analyses)
-            }
+            topic_analysis = TopicAnalysis(
+                topic=topic,
+                summary=summary,
+                document_analyses=analyzed_docs,
+                num_documents=len(analyzed_docs)
+            )
             
             # Save to file
             output_file = os.path.join(self.output_dir, f"{topic.replace(' ', '_').lower()}.json")
             with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(topic_analysis, f, ensure_ascii=False, indent=2)
+                f.write(topic_analysis.model_dump_json(indent=2))
                 
             logger.info(f"Saved topic analysis to {output_file}")
             return topic_analysis
@@ -210,21 +299,23 @@ class DocumentAnalyzer:
         except Exception as e:
             logger.error(f"Error creating topic summary for {topic}: {e}")
             
-            # Save partial results
-            topic_analysis = {
-                "topic": topic,
-                "document_analyses": analyses,
-                "num_documents": len(analyses),
-                "error": str(e)
-            }
+            # Create error topic analysis
+            topic_analysis = TopicAnalysis(
+                topic=topic,
+                summary=TopicSummary(),
+                document_analyses=analyzed_docs,
+                num_documents=len(analyzed_docs),
+                error=str(e)
+            )
             
+            # Save partial results
             output_file = os.path.join(self.output_dir, f"{topic.replace(' ', '_').lower()}_partial.json")
             with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(topic_analysis, f, ensure_ascii=False, indent=2)
+                f.write(topic_analysis.model_dump_json(indent=2))
                 
             return topic_analysis
     
-    def analyze_key_topics(self) -> List[Dict[str, Any]]:
+    def analyze_key_topics(self) -> List[TopicAnalysis]:
         """
         Analyze a set of predefined key topics.
         
@@ -260,7 +351,7 @@ class DocumentAnalyzer:
         self, 
         query: str, 
         num_results: int = 20
-    ) -> Dict[str, Any]:
+    ) -> TopicAnalysis:
         """
         Search for a custom query and analyze relevant documents.
         
@@ -269,6 +360,6 @@ class DocumentAnalyzer:
             num_results: Number of relevant documents to analyze
             
         Returns:
-            Query analysis results
+            TopicAnalysis: Query analysis results
         """
         return self.search_and_analyze_topic(query, num_results)

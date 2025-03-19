@@ -19,8 +19,9 @@ help:
 	@echo "Optional parameters for 'make run':"
 	@echo "  SKIP_SCRAPING=1   Skip document scraping"
 	@echo "  SKIP_PROCESSING=1 Skip document processing"
+	@echo "  SKIP_ANALYSIS=1   Skip document analysis"
 	@echo ""
-	@echo "Example: make run SKIP_SCRAPING=1"
+	@echo "Example: make run SKIP_SCRAPING=1 SKIP_PROCESSING=1"
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -51,10 +52,11 @@ build:
 	$(PYTHON) -m build
 
 test:
-	$(PYTHON) -m pytest
+	$(VENV)/bin/python -m pytest
 
 run:
 	$(eval ARGS := )
 	$(if $(SKIP_SCRAPING),$(eval ARGS += --skip-scraping))
 	$(if $(SKIP_PROCESSING),$(eval ARGS += --skip-processing))
-	$(PYTHON) -m jfkreveal $(ARGS)
+	$(if $(SKIP_ANALYSIS),$(eval ARGS += --skip-analysis))
+	$(VENV)/bin/python -m jfkreveal $(ARGS)
