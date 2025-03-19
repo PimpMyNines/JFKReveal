@@ -26,7 +26,7 @@ Clone the repository and set up the environment:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/JFKReveal.git
+git clone https://github.com/PimpMyNines/JFKReveal.git
 cd JFKReveal
 
 # Set up virtual environment and install dependencies
@@ -97,8 +97,8 @@ The system uses OpenAI embeddings for vectorization and GPT-4o for analysis, ens
 Key configuration options:
 
 - **OpenAI API Key**: Set in the `.env` file (copy from `.env.example`)
-- **Embedding Model**: Configure in `.env` file (defaults to `text-embedding-ada-002` for local development)
-- **Analysis Model**: Configure in `.env` file (defaults to `gpt-4o`)
+- **Embedding Model**: Configure in `.env` file (defaults to `text-embedding-3-large` for local development)
+- **Analysis Model**: Configure in `.env` file (defaults to `gpt-4.5-preview`)
 - **Chunking Parameters**: Adjust chunk size and overlap in `document_processor.py`
 - **Analysis Topics**: Modify topics list in `document_analyzer.py`
 

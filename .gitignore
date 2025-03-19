@@ -42,4 +42,4 @@ htmlcov/
 .pytest_cache/
 .tox/
 coverage.xml
-*.cover
+*.cover.env
