@@ -51,9 +51,9 @@ class JFKReveal:
             model_provider: Model provider to use ('openai', 'anthropic', or 'xai')
         """
         self.base_dir = base_dir
-        self.openai_api_key = openai_api_key
-        self.anthropic_api_key = anthropic_api_key
-        self.xai_api_key = xai_api_key
+        self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
+        self.anthropic_api_key = anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self.xai_api_key = xai_api_key or os.environ.get("XAI_API_KEY")
         self.model_provider = model_provider.lower()
         
         if self.model_provider not in ["openai", "anthropic", "xai"]:
@@ -75,18 +75,32 @@ class JFKReveal:
             output_dir=os.path.join(self.base_dir, "data/raw")
         )
         
-        downloaded_files = scraper.scrape_all()
+        downloaded_files, documents = scraper.scrape_all()
         
-        logger.info(f"Completed document scraping, downloaded {len(downloaded_files)} files")
+        logger.info(f"Completed document scraping, using {len(downloaded_files)} files ({len([d for d in documents if d.downloaded and not d.error])} newly downloaded)")
         return downloaded_files
     
     def process_documents(self):
         """Process PDF documents and extract text."""
         logger.info("Starting document processing")
         
+        # Check if OCR is disabled via command-line argument
+        enable_ocr = True
+        ocr_dpi = 300
+        
+        if hasattr(self, 'args'):
+            if hasattr(self.args, 'disable_ocr') and self.args.disable_ocr:
+                enable_ocr = False
+                logger.info("OCR is disabled via command-line argument")
+            
+            if hasattr(self.args, 'ocr_dpi'):
+                ocr_dpi = self.args.ocr_dpi
+        
         processor = DocumentProcessor(
             input_dir=os.path.join(self.base_dir, "data/raw"),
-            output_dir=os.path.join(self.base_dir, "data/processed")
+            output_dir=os.path.join(self.base_dir, "data/processed"),
+            enable_ocr=enable_ocr,
+            ocr_dpi=ocr_dpi
         )
         
         processed_files = processor.process_all_documents()
@@ -100,27 +114,29 @@ class JFKReveal:
         
         try:
             # For now we still use OpenAI embeddings even with Anthropic or XAI
-            # This is because alternative embeddings are handled differently or not yet available
             embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
             logger.info(f"Using embedding model: {embedding_model}")
             
             vector_store = VectorStore(
-                persist_directory=os.path.join(self.base_dir, "data/vectordb"),
                 embedding_model=embedding_model,
-                openai_api_key=self.openai_api_key,
-                xai_api_key=self.xai_api_key
+                openai_api_key=self.openai_api_key
             )
             
-            total_chunks = vector_store.add_all_documents(
-                processed_dir=os.path.join(self.base_dir, "data/processed")
-            )
+            # Add all processed documents
+            total_chunks = vector_store.add_all_documents()
             
-            logger.info(f"Completed vector database build, added {total_chunks} chunks")
+            # Add summary logging
+            if self.args.summarize_embeddings:
+                logger.info("=== Vector Database Summary ===")
+                logger.info(f"Total chunks embedded: {total_chunks}")
+                logger.info(f"Using embedding model: {embedding_model}")
+                logger.info(f"Vector store location: {vector_store.persist_directory}")
+                logger.info("============================")
+            
             return vector_store
             
         except Exception as e:
-            logger.error(f"Failed to build vector database: {e}")
-            logger.error("Skipping vector database build and analysis steps")
+            logger.error(f"Error building vector database: {e}")
             return None
     
     def analyze_documents(self, vector_store):
@@ -223,99 +239,230 @@ class JFKReveal:
         return report
     
     def run_pipeline(self, skip_scraping=False, skip_processing=False, skip_analysis=False):
-        """
-        Run the complete document analysis pipeline.
-        
-        Args:
-            skip_scraping: Skip document scraping
-            skip_processing: Skip document processing
-            skip_analysis: Skip document analysis
-        """
-        logger.info("Starting JFK documents analysis pipeline")
+        """Run the full document analysis pipeline."""
+        logger.info("Starting JFKReveal pipeline")
         
         # Step 1: Scrape documents
         if not skip_scraping:
             self.scrape_documents()
         else:
-            logger.info("Skipping document scraping, will use existing files")
+            logger.info("Skipping document scraping")
         
         # Step 2: Process documents
         if not skip_processing:
-            self.process_documents()
+            # Determine OCR settings
+            enable_ocr = True
+            ocr_dpi = 300
+            
+            if hasattr(self, 'args'):
+                if hasattr(self.args, 'disable_ocr') and self.args.disable_ocr:
+                    enable_ocr = False
+                    logger.info("OCR is disabled via command-line argument")
+                
+                if hasattr(self.args, 'ocr_dpi'):
+                    ocr_dpi = self.args.ocr_dpi
+                    logger.info(f"OCR resolution set to {ocr_dpi} DPI")
+            
+            # Use token-based chunking if requested
+            if hasattr(self, 'args') and self.args.use_token_chunking:
+                logger.info(f"Using token-based chunking with size={self.args.token_chunk_size}, overlap={self.args.token_chunk_overlap}")
+                processor = DocumentProcessor(
+                    input_dir=os.path.join(self.base_dir, "data/raw"),
+                    output_dir=os.path.join(self.base_dir, "data/processed"),
+                    chunk_size=self.args.token_chunk_size,
+                    chunk_overlap=self.args.token_chunk_overlap,
+                    use_token_based=True,
+                    enable_ocr=enable_ocr,
+                    ocr_dpi=ocr_dpi
+                )
+            else:
+                # Use default character-based chunking
+                processor = DocumentProcessor(
+                    input_dir=os.path.join(self.base_dir, "data/raw"),
+                    output_dir=os.path.join(self.base_dir, "data/processed"),
+                    enable_ocr=enable_ocr,
+                    ocr_dpi=ocr_dpi
+                )
+            
+            processor.process_all_documents()
         else:
             logger.info("Skipping document processing")
         
         # Step 3: Build vector database
         if not skip_analysis:
-            vector_store = self.build_vector_database()
-            
-            # Step 4: Analyze documents if vector store was created successfully
-            if vector_store is not None:
-                self.analyze_documents(vector_store)
+            # Build vector store with enhanced options if provided
+            if hasattr(self, 'args'):
+                # Configure embedding options from arguments
+                embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+                logger.info(f"Using embedding model: {embedding_model}")
+                
+                # Apply enhanced embedding options
+                self.vector_store = VectorStore(
+                    persist_directory=os.path.join(self.base_dir, "data/vectordb"),
+                    embedding_model=embedding_model,
+                    openai_api_key=self.openai_api_key,
+                    batch_size=self.args.embedding_batch_size if hasattr(self.args, 'embedding_batch_size') else 16,
+                    normalize_text=self.args.normalize_text if hasattr(self.args, 'normalize_text') else False,
+                    add_document_context=self.args.add_doc_context if hasattr(self.args, 'add_doc_context') else False
+                )
             else:
-                logger.warning("Skipping analysis phase due to vector store initialization failure")
-                skip_analysis = True
-        else:
-            logger.info("Skipping vector database build and analysis")
-        
-        # Step 5: Generate report
-        if not skip_analysis:
+                # Use default vector store configuration
+                self.vector_store = self.build_vector_database()
+            
+            if not self.vector_store:
+                logger.error("Failed to build vector database, exiting")
+                return
+            
+            # Step 4: Analyze documents
+            if hasattr(self, 'args'):
+                # Configure analyzer with enhanced options
+                analyzer = DocumentAnalyzer(
+                    vector_store=self.vector_store,
+                    output_dir=os.path.join(self.base_dir, "data/analysis"),
+                    model_name=self._get_model_name(),
+                    model_provider=self.model_provider,
+                    openai_api_key=self.openai_api_key,
+                    anthropic_api_key=self.anthropic_api_key,
+                    xai_api_key=self.xai_api_key,
+                    # Add enhanced options
+                    use_mmr=self.args.use_mmr if hasattr(self.args, 'use_mmr') else False,
+                    validate_outputs=self.args.validate_outputs if hasattr(self.args, 'validate_outputs') else False,
+                    include_few_shot=self.args.use_few_shot if hasattr(self.args, 'use_few_shot') else False
+                )
+                
+                # Use document-level aggregation if requested
+                if hasattr(self.args, 'aggregate_documents') and self.args.aggregate_documents:
+                    logger.info("Using document-level aggregation for analysis")
+                    for topic in analyzer.KEY_TOPICS:
+                        analysis = analyzer.search_and_analyze_with_aggregation(
+                            topic=topic,
+                            use_mmr=self.args.use_mmr if hasattr(self.args, 'use_mmr') else False,
+                            aggregate_documents=True
+                        )
+                        logger.info(f"Completed analysis for topic: {topic}")
+                else:
+                    # Standard topic analysis
+                    analyzer.analyze_key_topics()
+            else:
+                # Use standard analysis
+                self.analyze_documents(self.vector_store)
+            
+            # Step 5: Generate report
             self.generate_report()
-            # Print final report location
-            report_path = os.path.join(self.base_dir, "data/reports/full_report.html")
-            logger.info(f"Final report available at: {report_path}")
         else:
-            # Create a dummy report or use an existing one
-            report_path = os.path.join(self.base_dir, "data/reports/dummy_report.html")
-            with open(report_path, "w") as f:
-                f.write("<html><body><h1>JFK Document Analysis Report</h1><p>Analysis phase was skipped.</p></body></html>")
-            logger.info(f"Created dummy report at: {report_path}")
+            logger.info("Skipping document analysis")
         
-        logger.info("Completed JFK documents analysis pipeline")
+        logger.info("JFKReveal pipeline completed")
         
-        return report_path
+        # Return a meaningful result
+        return {
+            "success": True,
+            "documents_processed": len(os.listdir(os.path.join(self.base_dir, "data/processed"))),
+            "reports_generated": len(os.listdir(os.path.join(self.base_dir, "data/reports")))
+        }
 
+    def _get_model_name(self):
+        """Get the appropriate model name based on provider."""
+        if self.model_provider == "anthropic":
+            return os.environ.get("ANTHROPIC_ANALYSIS_MODEL", "claude-3-7-sonnet-20240620")
+        elif self.model_provider == "xai":
+            return os.environ.get("XAI_ANALYSIS_MODEL", "grok-2")
+        else:
+            return os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
 
 def main():
-    """Command-line entry point."""
-    parser = argparse.ArgumentParser(description="JFKReveal - Analyze declassified JFK assassination documents")
+    """Entry point for the JFK document analysis module."""
+    parser = argparse.ArgumentParser(description="JFK Documents Analysis Tool")
     
-    parser.add_argument("--base-dir", type=str, default=".",
-                        help="Base directory for data storage")
-    parser.add_argument("--openai-api-key", type=str,
-                        help="OpenAI API key (uses env var OPENAI_API_KEY if not provided)")
-    parser.add_argument("--anthropic-api-key", type=str,
-                        help="Anthropic API key (uses env var ANTHROPIC_API_KEY if not provided)")
-    parser.add_argument("--xai-api-key", type=str,
-                        help="X AI (Grok) API key (uses env var XAI_API_KEY if not provided)")
-    parser.add_argument("--model-provider", type=str, default="openai", choices=["openai", "anthropic", "xai"],
-                        help="Model provider to use (openai, anthropic, or xai)")
-    parser.add_argument("--skip-scraping", action="store_true",
-                        help="Skip document scraping")
-    parser.add_argument("--skip-processing", action="store_true",
-                        help="Skip document processing")
-    parser.add_argument("--skip-analysis", action="store_true",
-                        help="Skip document analysis and report generation")
+    # Core functionality flags
+    parser.add_argument("--skip-scraping", action="store_true", help="Skip document scraping")
+    parser.add_argument("--skip-processing", action="store_true", help="Skip document processing")
+    parser.add_argument("--skip-analysis", action="store_true", help="Skip document analysis")
+    
+    # Model selection options
+    parser.add_argument("--model-provider", type=str, default="openai", 
+                        choices=["openai", "anthropic", "xai"], 
+                        help="Model provider to use (openai, anthropic, xai)")
+    
+    # API keys
+    parser.add_argument("--openai-api-key", type=str, help="OpenAI API key")
+    parser.add_argument("--anthropic-api-key", type=str, help="Anthropic API key")
+    parser.add_argument("--xai-api-key", type=str, help="X AI (Grok) API key")
+    
+    # Processing options
+    parser.add_argument("--use-token-chunking", action="store_true", 
+                        help="Use token-based chunking instead of character-based")
+    parser.add_argument("--token-chunk-size", type=int, default=500, 
+                        help="Token chunk size (default: 500)")
+    parser.add_argument("--token-chunk-overlap", type=int, default=100,
+                        help="Token chunk overlap (default: 100)")
+    parser.add_argument("--disable-ocr", action="store_true",
+                        help="Disable OCR for PDF processing")
+    parser.add_argument("--ocr-dpi", type=int, default=300,
+                        help="DPI resolution for OCR (default: 300)")
+    
+    # Output options
+    parser.add_argument("--summarize-embeddings", action="store_true",
+                        help="Show summary of document embeddings")
     
     args = parser.parse_args()
     
-    # Run pipeline
-    jfk_reveal = JFKReveal(
-        base_dir=args.base_dir,
+    # Create JFKReveal instance with model provider
+    jfk = JFKReveal(
+        model_provider=args.model_provider,
         openai_api_key=args.openai_api_key,
         anthropic_api_key=args.anthropic_api_key,
-        xai_api_key=args.xai_api_key,
-        model_provider=args.model_provider
+        xai_api_key=args.xai_api_key
     )
+    jfk.args = args  # Store args for later use
     
-    report_path = jfk_reveal.run_pipeline(
+    # Run the pipeline
+    jfk.run_pipeline(
         skip_scraping=args.skip_scraping,
-        skip_processing=args.skip_processing,
+        skip_processing=args.skip_processing, 
         skip_analysis=args.skip_analysis
     )
     
-    print(f"\nAnalysis complete! Final report available at: {report_path}")
-
+    # Run custom query if provided
+    if args.query:
+        if not jfk.vector_store:
+            jfk.vector_store = jfk.build_vector_database()
+            
+        if jfk.vector_store:
+            analyzer = DocumentAnalyzer(
+                vector_store=jfk.vector_store,
+                output_dir=os.path.join(jfk.base_dir, "data/analysis"),
+                model_name=jfk._get_model_name(),
+                model_provider=jfk.model_provider,
+                openai_api_key=jfk.openai_api_key,
+                anthropic_api_key=jfk.anthropic_api_key,
+                xai_api_key=jfk.xai_api_key,
+                # Add new RAG enhancement options
+                use_mmr=args.use_mmr,
+                validate_outputs=args.validate_outputs,
+                include_few_shot=args.use_few_shot
+            )
+            
+            if args.aggregate_documents:
+                logger.info(f"Running query with document aggregation: {args.query}")
+                analysis = analyzer.search_and_analyze_with_aggregation(
+                    topic=args.query,
+                    num_results=20,
+                    use_mmr=args.use_mmr,
+                    aggregate_documents=True
+                )
+            else:
+                logger.info(f"Running query: {args.query}")
+                analysis = analyzer.search_and_analyze_topic(
+                    topic=args.query,
+                    num_results=20,
+                    use_mmr=args.use_mmr,
+                    mmr_diversity=args.mmr_diversity,
+                    hybrid_search=args.use_hybrid_search
+                )
+            
+            logger.info(f"Completed query analysis for: {args.query}")
+            logger.info(f"Analysis saved to: {os.path.join(jfk.base_dir, 'data/analysis', args.query.replace(' ', '_').lower() + '.json')}")
 
 if __name__ == "__main__":
     main()

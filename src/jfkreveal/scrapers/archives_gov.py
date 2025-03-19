@@ -260,6 +260,7 @@ class ArchivesGovScraper:
     def scrape_all(self):
         """
         Scrape all PDF documents from the National Archives JFK Release site.
+        Only downloads files that don't already exist locally.
         
         Returns:
             tuple: (list of downloaded file paths, list of PDFDocument objects)
@@ -277,14 +278,39 @@ class ArchivesGovScraper:
         all_pdf_links = list(set(all_pdf_links))
         logger.info(f"Found {len(all_pdf_links)} PDF documents across all archives")
         
-        downloaded_files = []
+        # Preprocess URL to filename mapping and check against existing files
+        existing_files = set(os.listdir(self.output_dir)) if os.path.exists(self.output_dir) else set()
+        urls_to_download = []
+        already_exists = []
         documents = []
         
-        for url in tqdm(all_pdf_links, desc="Downloading PDFs"):
-            # Check if file already exists
+        # First pass: identify which files need to be downloaded
+        for url in all_pdf_links:
             filename = self._sanitize_filename(url)
             output_path = os.path.join(self.output_dir, filename)
             
+            if filename in existing_files and os.path.getsize(output_path) > 0:
+                already_exists.append(output_path)
+                # Create document object for existing file
+                document = PDFDocument(
+                    url=url,
+                    filename=filename,
+                    local_path=output_path,
+                    downloaded=True,
+                    error=None
+                )
+                documents.append(document)
+            else:
+                urls_to_download.append(url)
+        
+        logger.info(f"Found {len(already_exists)} files that already exist locally")
+        logger.info(f"Need to download {len(urls_to_download)} new files")
+        
+        # Second pass: download only missing files
+        downloaded_files = []
+        
+        for url in tqdm(urls_to_download, desc="Downloading new PDFs"):
+            filename = self._sanitize_filename(url)
             file_path = self.download_pdf(url)
             
             # Create document object
@@ -302,6 +328,8 @@ class ArchivesGovScraper:
             
             # Respect the site by adding a delay with jitter between requests
             self._sleep_with_jitter()
-            
-        logger.info(f"Downloaded {len(downloaded_files)} files to {self.output_dir}")
-        return downloaded_files, documents
+        
+        # Combine existing and newly downloaded files
+        all_files = already_exists + downloaded_files
+        logger.info(f"Using {len(all_files)} total files ({len(downloaded_files)} newly downloaded)")
+        return all_files, documents
