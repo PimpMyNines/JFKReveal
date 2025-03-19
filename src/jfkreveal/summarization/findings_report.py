@@ -71,10 +71,12 @@ class FindingsReport:
         self,
         analysis_dir: str = "data/analysis",
         output_dir: str = "data/reports",
+        raw_docs_dir: str = "data/raw",
         model_name: str = "gpt-4o",
         openai_api_key: Optional[str] = None,
         temperature: float = 0.1,
         max_retries: int = 5,
+        pdf_base_url: str = "https://www.archives.gov/files/research/jfk/releases/2025/0318/",
     ):
         """
         Initialize the findings report generator.
@@ -82,16 +84,20 @@ class FindingsReport:
         Args:
             analysis_dir: Directory containing analysis files
             output_dir: Directory to save reports
+            raw_docs_dir: Directory containing raw PDF documents
             model_name: OpenAI model to use
             openai_api_key: OpenAI API key (uses environment variable if not provided)
             temperature: Temperature for LLM generation
             max_retries: Maximum number of retries for API calls
+            pdf_base_url: Base URL for PDF documents for generating links
         """
         self.analysis_dir = analysis_dir
         self.output_dir = output_dir
+        self.raw_docs_dir = raw_docs_dir
         self.model_name = model_name
         self.temperature = temperature
         self.max_retries = max_retries
+        self.pdf_base_url = pdf_base_url
         
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
@@ -103,13 +109,38 @@ class FindingsReport:
             api_key=openai_api_key,
             max_retries=max_retries,
         )
+        
+        # Build document ID to PDF URL mapping
+        self.document_urls = self._build_document_urls()
+    
+    def _build_document_urls(self) -> Dict[str, str]:
+        """
+        Build a mapping of document IDs to their PDF URLs.
+        
+        Returns:
+            Dictionary mapping document IDs to their PDF URLs
+        """
+        document_urls = {}
+        
+        # Get list of PDF files in raw documents directory
+        if os.path.exists(self.raw_docs_dir):
+            for file in os.listdir(self.raw_docs_dir):
+                if file.endswith('.pdf'):
+                    # Remove extension to get document ID
+                    doc_id = os.path.splitext(file)[0]
+                    # Create URL
+                    pdf_url = f"{self.pdf_base_url}{file}"
+                    document_urls[doc_id] = pdf_url
+        
+        logger.info(f"Built URL mapping for {len(document_urls)} documents")
+        return document_urls
     
     def load_analyses(self) -> List[Dict[str, Any]]:
         """
         Load all analysis files.
         
         Returns:
-            List of analysis data
+            List of analysis data with added PDF links
         """
         analyses = []
         
@@ -121,11 +152,27 @@ class FindingsReport:
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         analysis = json.load(f)
+                        
+                        # Add PDF URLs to documents referenced in the analysis
+                        if "documents" in analysis:
+                            for i, doc in enumerate(analysis["documents"]):
+                                doc_id = doc.get("document_id")
+                                if doc_id and doc_id in self.document_urls:
+                                    analysis["documents"][i]["pdf_url"] = self.document_urls[doc_id]
+                        
+                        # Add PDF URLs to additional evidence
+                        if "additional_evidence" in analysis:
+                            for i, evidence in enumerate(analysis["additional_evidence"]):
+                                if isinstance(evidence, dict) and "document_id" in evidence:
+                                    doc_id = evidence["document_id"]
+                                    if doc_id in self.document_urls:
+                                        analysis["additional_evidence"][i]["pdf_url"] = self.document_urls[doc_id]
+                        
                         analyses.append(analysis)
                 except Exception as e:
                     logger.error(f"Error loading analysis file {file_path}: {e}")
         
-        logger.info(f"Loaded {len(analyses)} analysis files")
+        logger.info(f"Loaded {len(analyses)} analysis files with PDF links")
         return analyses
     
     @retry(
@@ -162,7 +209,17 @@ class FindingsReport:
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
 
-Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and sourced. For each claim, cite the exact source document, report, or testimony it is derived from. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details. If a claim lacks verifiable evidence, label it as 'unverified' or 'requires further investigation.'
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts, theories, and speculation. Present multiple perspectives where necessary, but never assert an unverified claim as truth. Example of proper attribution: "The Warren Commission Report concluded X, but critics argue Y, citing document Z." Never state unverified claims as confirmed facts.
+
+3. Information Constraints: If information is not explicitly found in the source material, you must respond with 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in official records. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
+
+4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
             ("human", """
             Based on the following analyses of declassified JFK documents, create a comprehensive executive summary.
             
@@ -192,11 +249,20 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
                 • Most likely scenario based on all available evidence
                 • Unresolved questions that demand further investigation
             
+            IMPORTANT: When referencing specific documents, include PDF links if available. For example, if a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" or with a footnote linking to the PDF.
+            
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, bullet points, and emphasis.
-            Include specific document references for key claims where possible.
+            Include specific document references for key claims where possible with PDF links when available.
             Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
             Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
             Ensure the language is professional, highly detailed, and structured for clarity.
+            
+            Before finalizing your report, you MUST perform a self-audit:
+            1. Identify any unverified claims and mark them as such
+            2. Correct any inconsistencies and contradictions 
+            3. Highlight areas requiring further evidence
+            4. Verify that every claim has proper source attribution
+            5. Confirm you've distinguished clearly between facts and speculation
             """)
         ])
         
@@ -262,7 +328,17 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
 
-Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and sourced. For each claim, cite the exact source document, report, or testimony it is derived from. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details. If a claim lacks verifiable evidence, label it as 'unverified' or 'requires further investigation.'
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts, theories, and speculation. Present multiple perspectives where necessary, but never assert an unverified claim as truth. Example of proper attribution: "The Warren Commission Report concluded X, but critics argue Y, citing document Z." Never state unverified claims as confirmed facts.
+
+3. Information Constraints: If information is not explicitly found in the source material, you must respond with 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in official records. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
+
+4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
             ("human", """
             Based on the following analyses of declassified JFK documents, create a comprehensive detailed findings report.
             
@@ -308,8 +384,10 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
                 • Present alternative suspects with detailed analysis of their potential involvement
                 • Assess possible collaborations between suspects
             
+            IMPORTANT: When referencing specific documents, ALWAYS include PDF links when available. For example, if a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" to create a clickable link to the original document.
+            
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
-            Include specific document references (document_id) for all key claims.
+            Include specific document references (document_id) for all key claims WITH PDF LINKS when available.
             Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
             Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
             Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
@@ -353,7 +431,17 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
 
-Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and sourced. For each claim, cite the exact source document, report, or testimony it is derived from. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details. If a claim lacks verifiable evidence, label it as 'unverified' or 'requires further investigation.'
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts, theories, and speculation. Present multiple perspectives where necessary, but never assert an unverified claim as truth. Example of proper attribution: "The Warren Commission Report concluded X, but critics argue Y, citing document Z." Never state unverified claims as confirmed facts.
+
+3. Information Constraints: If information is not explicitly found in the source material, you must respond with 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in official records. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
+
+4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
             ("human", """
             Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential suspects in the assassination.
             
@@ -401,8 +489,10 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
                 • Identify missing evidence that would strengthen or refute the case
                 • Provide a final judgment on the most likely perpetrator(s)
             
+            IMPORTANT: When referencing specific documents, ALWAYS include PDF links when available. If a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" to create a clickable link to the original document.
+            
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
-            Include specific document references (document_id) for all key claims.
+            Include specific document references (document_id) for all key claims WITH PDF LINKS when available.
             Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
             Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
             Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
@@ -495,7 +585,17 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
 
-Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and sourced. For each claim, cite the exact source document, report, or testimony it is derived from. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details. If a claim lacks verifiable evidence, label it as 'unverified' or 'requires further investigation.'
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts, theories, and speculation. Present multiple perspectives where necessary, but never assert an unverified claim as truth. Example of proper attribution: "The Warren Commission Report concluded X, but critics argue Y, citing document Z." Never state unverified claims as confirmed facts.
+
+3. Information Constraints: If information is not explicitly found in the source material, you must respond with 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in official records. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
+
+4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
             ("human", """
             Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential coverups related to the assassination.
             
@@ -552,8 +652,10 @@ Your task is to conduct a comprehensive investigation, analyzing all available e
                 • Evaluate the key objectives of information control
                 • Provide a definitive assessment of coverup evidence and implications
             
+            IMPORTANT: When referencing specific documents, ALWAYS include PDF links when available. If a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" to create a clickable link to the original document.
+            
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
-            Include specific document references (document_id) for all key claims.
+            Include specific document references (document_id) for all key claims WITH PDF LINKS when available.
             Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
             Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
             Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.

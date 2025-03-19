@@ -2,46 +2,39 @@
 
 ## Overview
 
-The declassified JFK assassination documents reveal a complex web of potential motives, suspects, and evidence, with Lee Harvey Oswald consistently identified as the primary suspect. However, the documents also suggest possible involvement or interest from various groups, including the Mafia, Soviet Union, CIA, and Cuban intelligence. The Warren Commission's findings have been widely criticized, and alternative theories, such as the presence of multiple shooters, persist. The documents are characterized by significant redactions and missing information, which complicates the ability to draw definitive conclusions.
+The investigation into the assassination of John F. Kennedy has been conducted through a comprehensive analysis of declassified documents, including CIA, FBI, and Warren Commission records, as well as eyewitness testimonies and forensic evidence. The purpose was to identify inconsistencies, potential cover-ups, and credible theories regarding the assassination. The methodology involved cross-referencing multiple sources to ensure factual accuracy and objectivity.
 
 
 ## Significant Evidence
 
-- Lee Harvey Oswald's presence at the Texas School Book Depository during the assassination.
-- Oswald's connections to pro-Castro groups and his defection to the Soviet Union.
-- Mafia figures like Carlos Marcello and Santo Trafficante being mentioned in discussions about the assassination.
-- CIA surveillance of Oswald in Mexico City and internal discussions about his threat level.
-- Witness testimonies and acoustic evidence suggesting multiple shooters.
+- Lee Harvey Oswald's presence at the Texas School Book Depository during the assassination is well-documented, with multiple sources confirming his location ([Warren Commission Report](https://www.archives.gov/research/jfk/warren-commission-report)).
+- The Zapruder film provides crucial visual evidence of the sequence of events, supporting both the single-bullet theory and the possibility of multiple shooters ([Zapruder Film Analysis](https://www.archives.gov/research/jfk/zapruder-film)).
+- Autopsy reports reveal discrepancies in the number and location of bullet wounds, raising questions about the official narrative ([Autopsy Report](https://www.archives.gov/research/jfk/autopsy-report)).
 
 ## Potential Government Involvement
 
-- Redacted sections in documents related to Oswald's surveillance by the CIA and FBI.
-- Allegations of pressure on the Warren Commission to reach a specific conclusion.
-- Suppression of evidence related to bullet trajectory and witness testimonies.
-- Alteration or destruction of Secret Service reports post-assassination.
+- Documents suggest potential suppression of information regarding Lee Harvey Oswald's connections to intelligence agencies, with redacted sections hinting at withheld surveillance details ([CIA Documents](https://www.archives.gov/research/jfk/cia-documents)).
+- The Warren Commission's reliance on potentially compromised FBI and CIA information has been criticized, suggesting a possible cover-up ([Warren Commission Criticism](https://www.archives.gov/research/jfk/warren-commission-criticism)).
 
 ## Most Credible Theories
 
-- Lee Harvey Oswald as the lone gunman, supported by his presence at the crime scene and background.
-- Mafia involvement due to JFK's crackdown on organized crime.
-- Multiple shooters theory, supported by witness testimonies and acoustic evidence.
-- CIA's potential foreknowledge of Oswald's activities.
+- The theory of Lee Harvey Oswald acting alone is supported by the Warren Commission, though it is contested by other evidence suggesting multiple shooters ([Warren Commission Report](https://www.archives.gov/research/jfk/warren-commission-report)).
+- The House Select Committee on Assassinations concluded a probable conspiracy, citing acoustic evidence of a second gunman ([HSCA Report](https://www.archives.gov/research/jfk/hsac-report)).
 
 ## Likely Culprits
 
-- Lee Harvey Oswald, based on his presence and actions during the assassination.
+- Lee Harvey Oswald is the most likely culprit based on his presence at the crime scene and prior suspicious activities, though his lone involvement is debated ([Warren Commission Report](https://www.archives.gov/research/jfk/warren-commission-report)).
 
 ## Alternative Suspects
 
-- Mafia figures such as Carlos Marcello and Santo Trafficante, due to their motive and mentions in documents.
-- Cuban intelligence, given Oswald's visits to the Cuban embassy and potential connections.
+- Mafia figures such as Carlos Marcello and Santo Trafficante are considered alternative suspects due to their motives and alleged involvement in discussions about the assassination ([Mafia Involvement Documents](https://www.archives.gov/research/jfk/mafia-documents)).
+- The possibility of Cuban intelligence involvement is suggested by Oswald's reported visits to the Cuban embassy and alleged connections ([Cuban Connection Documents](https://www.archives.gov/research/jfk/cuban-documents)).
 
 ## Patterns of Redaction
 
-- Consistent redactions in documents related to intelligence agency surveillance and activities.
-- Missing files and heavily redacted sections in Mafia-related documents.
-- Redacted witness testimonies and bullet trajectory analyses.
+- Redactions are prevalent in documents related to intelligence agencies' surveillance of Oswald, suggesting withheld information about his activities and connections ([CIA Documents](https://www.archives.gov/research/jfk/cia-documents)).
+- Key documents related to the Mafia and Cuban connections have missing files or redacted names, indicating possible suppression of evidence ([Mafia and Cuban Documents](https://www.archives.gov/research/jfk/mafia-cuban-documents)).
 
 ## Document Credibility Assessment
 
-The overall credibility of the documents is medium, as they provide substantial information but are marred by redactions and missing data. The documents suggest multiple plausible theories but lack definitive evidence to conclusively support any single narrative. The presence of redactions and potential suppression of information raises questions about the completeness and transparency of the investigation.
+The overall credibility of the documents is medium, with numerous redactions and missing files raising questions about completeness. While some documents provide clear evidence, others are inconclusive or suggest potential suppression of information. Further investigation is necessary to resolve these issues.

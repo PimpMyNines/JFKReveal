@@ -142,7 +142,17 @@ class DocumentAnalyzer:
         
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Extract information in the requested JSON format."),
+            ("system", """You are an expert analyst examining declassified JFK assassination documents. Extract information in the requested JSON format.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and directly found in the document excerpt. For each item, include the exact quote from the document where the information is derived from. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details.
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts and speculation. Never assert an interpretation as a confirmed fact unless it is explicitly stated in the document.
+
+3. Information Constraints: If information related to a category is not explicitly found in the document excerpt, return an empty array for that category. Do not generate information beyond what is documented in the excerpt. Never fill in gaps with assumptions.
+
+4. Self-Audit Requirement: Before completing your extraction, verify that each item is directly supported by text in the document excerpt. Remove any items that contain speculation or inference beyond what the document states."""),
             ("human", """
             Analyze the following document excerpt carefully for any significant information
             related to the JFK assassination, potential coverups, or government involvement.
@@ -232,7 +242,17 @@ class DocumentAnalyzer:
         
         # Create overall topic analysis prompt
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Summarize findings across multiple document analyses."),
+            ("system", """You are an expert analyst examining declassified JFK assassination documents. Summarize findings across multiple document analyses.
+
+You must adhere to these non-negotiable guidelines:
+
+1. Source Attribution: You must only include information that is verifiable and sourced from the analyzed documents. For key claims, cite the specific document IDs where the information is derived. If a fact is uncertain, explicitly state the uncertainty and do not fabricate details. If a claim lacks verifiable evidence, label it as 'unverified' or 'requires further investigation.'
+
+2. Fact vs. Speculation Distinction: You must clearly differentiate between documented facts, theories, and speculation. Present multiple perspectives where found in the documents, but never assert an unverified claim as truth. Example of proper attribution: "Document X claims Y, while Document Z suggests an alternative view."
+
+3. Information Constraints: If information is not explicitly found in the analyzed documents, you must indicate 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in the analyzed materials. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
+
+4. Self-Audit Requirement: Before completing your summary, examine each key finding to ensure it is directly supported by at least one document in the analysis. Remove or flag any findings that lack direct document support."""),
             ("human", """
             You've analyzed multiple document excerpts related to: {topic}
             

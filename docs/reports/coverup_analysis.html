@@ -1,260 +1,288 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JFK Assassination Analysis - Executive Summary</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #c41e3a;
-            --secondary: #0a3161;
-            --text: #333;
-            --light: #f5f5f5;
-            --dark: #222;
-            --accent: #8a8d93;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: var(--text);
-            background-color: var(--light);
-            padding: 0;
-            margin: 0;
-        }
-        
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 40px 0;
-            text-align: center;
-            margin-bottom: 40px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        header h1 {
-            font-size: 2.5rem;
-            margin: 0;
-            padding: 0;
-            color: white;
-            border: none;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .content {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 40px;
-        }
-        
-        h1 { color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }
-        
-        h2 { 
-            color: var(--secondary); 
-            margin-top: 30px; 
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--primary);
-            font-size: 1.8rem;
-        }
-        
-        h3 { 
-            color: var(--text); 
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-size: 1.4rem;
-        }
-        
-        p { margin-bottom: 20px; font-size: 1.1rem; }
-        
-        ul, ol { margin-bottom: 20px; padding-left: 20px; }
-        
-        li { margin-bottom: 8px; }
-        
-        blockquote { 
-            background-color: #f9f9f9; 
-            border-left: 4px solid var(--primary); 
-            margin: 1.5em 0; 
-            padding: 1em 20px;
-            font-style: italic;
-            border-radius: 0 4px 4px 0;
-        }
-        
-        code { 
-            background-color: #f4f4f4; 
-            padding: 2px 4px; 
-            border-radius: 4px; 
-            font-family: monospace;
-        }
-        
-        table { 
-            border-collapse: collapse; 
-            width: 100%; 
-            margin: 20px 0; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        
-        th, td { 
-            padding: 12px 15px; 
-            text-align: left; 
-            border-bottom: 1px solid #ddd;
-        }
-        
-        th { 
-            background-color: var(--secondary); 
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
-        }
-        
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f1f1; }
-        
-        a {
-            color: var(--primary);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-        
-        a:hover {
-            color: var(--secondary);
-            text-decoration: underline;
-        }
-        
-        .back-link {
-            display: inline-block;
-            margin: 20px 0;
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: bold;
-        }
-        
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        
-        footer {
-            background: var(--dark);
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-        }
-        
-        @media (max-width: 768px) {
-            .content {
-                padding: 20px;
-            }
-            
-            header h1 {
-                font-size: 2rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="container">
-            <h1>JFK<span style="color: #f3da35;">Reveal</span> - Coverup Analysis</h1>
-        </div>
-    </header>
-    
-    <div class="container">
-        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
-        
-        <div class="content">
-            <h1>Executive Summary: JFK Assassination Document Analysis</h1>
-
-            <h2>Introduction & Scope</h2>
-            <p>This investigation examines declassified documents related to the assassination of President John F. Kennedy on November 22, 1963, in Dallas, Texas. The purpose is to analyze available evidence using advanced AI techniques to identify patterns, inconsistencies, and potential coverups within the official narrative.</p>
-            <p>Our analysis is based on documents from the National Archives JFK Collection, including FBI and CIA reports, witness testimonies, autopsy findings, and Warren Commission materials. We've employed semantic search and text analysis methods to extract meaningful insights from these documents.</p>
-
-            <h2>Key Findings Overview</h2>
-            <h3>Significant Evidence</h3>
-            <ul>
-                <li>Multiple witness testimonies contradicted the official single-gunman theory, with many reporting shots from the grassy knoll area</li>
-                <li>Ballistic evidence showed inconsistencies with the single-bullet theory, particularly regarding bullet trajectories and wound analysis</li>
-                <li>Lee Harvey Oswald's connections to both Cuban exile groups and Soviet intelligence remain inadequately explained in official records</li>
-                <li>Jack Ruby's organized crime connections and the circumstances of his shooting of Oswald suggest a possible silencing operation</li>
-                <li>Autopsy records contained multiple contradictions and procedural irregularities compared to standard protocols</li>
-            </ul>
-
-            <h3>Potential Government Involvement</h3>
-            <ul>
-                <li>CIA documentation reveals knowledge of Oswald before the assassination that was withheld from the Warren Commission</li>
-                <li>FBI monitoring of Oswald ceased mysteriously in the weeks before the assassination</li>
-                <li>Secret Service protocols were altered just before the presidential motorcade</li>
-                <li>Military intelligence files on Oswald were deliberately destroyed after the assassination</li>
-                <li>Extensive redactions in documents concerning CIA operations against Cuba suggest possible connections</li>
-            </ul>
-
-            <h3>Most Credible Theories</h3>
-            <ul>
-                <li>The coordinated conspiracy theory involving organized crime elements with possible intelligence agency knowledge remains most consistent with documented evidence</li>
-                <li>Evidence suggests Oswald was likely involved but not acting alone, serving as either a willing conspirator or an unwitting patsy</li>
-                <li>The involvement of Cuban exile groups with anti-Kennedy sentiments appears credible based on documented connections</li>
-                <li>Intelligence agency involvement more likely consisted of deliberate negligence and post-assassination coverup rather than direct orchestration</li>
-            </ul>
-
-            <h2>Key Suspects Assessment</h2>
-            <h3>Primary Suspects</h3>
-            <ul>
-                <li>Lee Harvey Oswald: Evidence supports his involvement, but multiple factors suggest he did not act alone</li>
-                <li>Organized crime figures, particularly those with gambling interests threatened by Kennedy's policies</li>
-                <li>Anti-Castro Cuban exiles with documented grievances against Kennedy following the Bay of Pigs failure</li>
-                <li>Intelligence operatives potentially involved in unauthorized operations</li>
-            </ul>
-
-            <h3>Alternative Suspects</h3>
-            <ul>
-                <li>Soviet intelligence - minimal credible evidence despite Oswald's USSR connections</li>
-                <li>Right-wing extremist groups - some circumstantial evidence but limited documented connections</li>
-                <li>Military-industrial complex actors - theoretical motive regarding Vietnam policy changes, but limited direct evidence</li>
-            </ul>
-
-            <h2>Document Analysis</h2>
-            <h3>Redaction Patterns</h3>
-            <ul>
-                <li>Systematic redaction of CIA operational details in Cuba and Mexico</li>
-                <li>Consistent obscuring of specific names and locations in organized crime surveillance records</li>
-                <li>Targeted removal of information regarding Oswald's intelligence connections</li>
-                <li>Heavy redactions in all documents mentioning ongoing operations at the time of assassination</li>
-            </ul>
-
-            <h3>Document Credibility Assessment</h3>
-            <p>The analyzed documents exhibit significant omissions and targeted redactions consistent with a controlled narrative. While the core dataset contains valuable primary evidence, the selective release and redaction patterns suggest a deliberate information management strategy designed to support the official lone gunman conclusion while obscuring contradictory evidence.</p>
-            <p>The most substantial gaps relate to Oswald's intelligence connections, his activities in Mexico, and the full extent of organized crime surveillance related to the case. These gaps appear strategic rather than random, suggesting a deliberate narrowing of investigative scope.</p>
-
-            <h2>Final Assessment</h2>
-            <p>Based on comprehensive analysis of available evidence, the assassination of President Kennedy most likely resulted from a conspiracy involving multiple parties, with Lee Harvey Oswald serving as either a direct participant or an ideal scapegoat. The conspiracy most likely originated from organized crime elements with possible Cuban exile involvement, exploiting Oswald's unstable history and Soviet connections.</p>
-            <p>Evidence strongly indicates a subsequent coverup operation aimed at containing the investigation and preventing exposure of intelligence agency negligence or unauthorized operations. This coverup appears motivated primarily by national security concerns rather than direct agency complicity in the assassination itself.</p>
-            <p>Critical questions requiring further investigation include the full extent of Oswald's intelligence connections, detailed analysis of all witness testimonies contradicting the lone gunman theory, forensic reexamination of ballistic evidence, and complete unredacted access to CIA operations concerning Cuba during this period.</p>
-            
-            <p><em>Generated on March 18, 2025</em></p>
-        </div>
-        
-        <footer>
-            <p><em>Generated on March 18, 2025</em></p>
-            <p>JFKReveal - AI Analysis of Declassified Documents</p>
-        </footer>
-    </div>
-</body>
-</html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>JFK Assassination Analysis - Coverup Analysis</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        :root {
+                            --primary: #c41e3a;
+                            --secondary: #0a3161;
+                            --text: #333;
+                            --light: #f5f5f5;
+                            --dark: #222;
+                            --accent: #8a8d93;
+                        }
+                        
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            line-height: 1.6;
+                            color: var(--text);
+                            background-color: var(--light);
+                            padding: 0;
+                            margin: 0;
+                        }
+                        
+                        .container {
+                            max-width: 1000px;
+                            margin: 0 auto;
+                            padding: 0 20px;
+                        }
+                        
+                        header {
+                            background: linear-gradient(135deg, var(--primary), var(--secondary));
+                            color: white;
+                            padding: 40px 0;
+                            text-align: center;
+                            margin-bottom: 40px;
+                            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                        }
+                        
+                        header h1 {
+                            font-size: 2.5rem;
+                            margin: 0;
+                            padding: 0;
+                            color: white;
+                            border: none;
+                            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                        }
+                        
+                        .content {
+                            background: white;
+                            padding: 40px;
+                            border-radius: 8px;
+                            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                            margin-bottom: 40px;
+                        }
+                        
+                        h1 { color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }
+                        
+                        h2 { 
+                            color: var(--secondary); 
+                            margin-top: 30px; 
+                            margin-bottom: 20px;
+                            padding-bottom: 10px;
+                            border-bottom: 2px solid var(--primary);
+                            font-size: 1.8rem;
+                        }
+                        
+                        h3 { 
+                            color: var(--text); 
+                            margin-top: 25px;
+                            margin-bottom: 15px;
+                            font-size: 1.4rem;
+                        }
+                        
+                        p { margin-bottom: 20px; font-size: 1.1rem; }
+                        
+                        ul, ol { margin-bottom: 20px; padding-left: 20px; }
+                        
+                        li { margin-bottom: 8px; }
+                        
+                        blockquote { 
+                            background-color: #f9f9f9; 
+                            border-left: 4px solid var(--primary); 
+                            margin: 1.5em 0; 
+                            padding: 1em 20px;
+                            font-style: italic;
+                            border-radius: 0 4px 4px 0;
+                        }
+                        
+                        code { 
+                            background-color: #f4f4f4; 
+                            padding: 2px 4px; 
+                            border-radius: 4px; 
+                            font-family: monospace;
+                        }
+                        
+                        table { 
+                            border-collapse: collapse; 
+                            width: 100%; 
+                            margin: 20px 0; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            border-radius: 4px;
+                            overflow: hidden;
+                        }
+                        
+                        th, td { 
+                            padding: 12px 15px; 
+                            text-align: left; 
+                            border-bottom: 1px solid #ddd;
+                        }
+                        
+                        th { 
+                            background-color: var(--secondary); 
+                            color: white;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            font-size: 0.9rem;
+                            letter-spacing: 1px;
+                        }
+                        
+                        tr:nth-child(even) { background-color: #f9f9f9; }
+                        tr:hover { background-color: #f1f1f1; }
+                        
+                        a {
+                            color: var(--primary);
+                            text-decoration: none;
+                            transition: color 0.3s;
+                        }
+                        
+                        a:hover {
+                            color: var(--secondary);
+                            text-decoration: underline;
+                        }
+                        
+                        .back-link {
+                            display: inline-block;
+                            margin: 20px 0;
+                            color: var(--primary);
+                            text-decoration: none;
+                            font-weight: bold;
+                        }
+                        
+                        .back-link:hover {
+                            text-decoration: underline;
+                        }
+                        
+                        footer {
+                            background: var(--dark);
+                            color: white;
+                            padding: 20px 0;
+                            text-align: center;
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .content {
+                                padding: 20px;
+                            }
+                            
+                            header h1 {
+                                font-size: 2rem;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <header>
+                        <div class="container">
+                            <h1>JFK<span style="color: #f3da35;">Reveal</span> - Coverup Analysis</h1>
+                        </div>
+                    </header>
+                    
+                    <div class="container">
+                        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                        
+                        <div class="content">
+                            <h1>JFK Assassination Coverup Analysis</h1>
+<h2>1. Information Control Assessment</h2>
+<h3>Evidence of Information Suppression or Tampering</h3>
+<ul>
+<li><strong>Redacted Documents</strong>: Numerous documents related to Lee Harvey Oswald and potential intelligence connections have redacted sections, suggesting suppression of critical information. This pattern is seen across documents discussing Oswald's surveillance and interactions with intelligence agencies.</li>
+<li><strong>Strategic Timing</strong>: The release of documents often coincided with public pressure or anniversaries of the assassination, indicating a strategic approach to information dissemination.</li>
+</ul>
+<h3>Patterns of Redaction</h3>
+<ul>
+<li><strong>Consistent Redactions</strong>: Documents related to CIA and FBI surveillance of Oswald, as well as those discussing Mafia involvement, show consistent redactions, particularly in sections that could reveal operational details or intelligence connections.</li>
+</ul>
+<h3>Unusual Classification or Handling</h3>
+<ul>
+<li><strong>Extended Classification</strong>: Some documents, particularly those involving Cuban connections and CIA activities, remained classified for unusually long periods, raising questions about their content and the reasons for their prolonged secrecy.</li>
+</ul>
+<h2>2. Narrative Inconsistencies</h2>
+<h3>Contradictions in Official Narratives</h3>
+<ul>
+<li><strong>Single vs. Multiple Shooters</strong>: The Warren Commission's conclusion of a lone gunman is contradicted by the House Select Committee on Assassinations, which suggested a probable conspiracy based on acoustic evidence (<a href="#">HSCA Report</a>).</li>
+<li><strong>Oswald's Motives</strong>: Conflicting reports about Oswald's mental state and motivations, with some documents portraying him as a lone wolf and others suggesting manipulation or external influence.</li>
+</ul>
+<h3>Changes in Official Statements</h3>
+<ul>
+<li><strong>Evolving Statements</strong>: Initial statements by government agencies often emphasized Oswald's sole responsibility, while later investigations, such as the HSCA, acknowledged the possibility of a conspiracy.</li>
+</ul>
+<h3>Selective Emphasis or Omission</h3>
+<ul>
+<li><strong>Omitted Testimonies</strong>: Witness testimonies that contradicted the lone gunman theory were often downplayed or omitted from official reports, as noted in critiques of the Warren Commission.</li>
+</ul>
+<h2>3. Evidence Handling Analysis</h2>
+<h3>Document Disappearance or Destruction</h3>
+<ul>
+<li><strong>Missing Autopsy Materials</strong>: Key autopsy photographs and X-rays are reported missing or incomplete, which could have provided crucial evidence regarding bullet trajectories and wound analysis.</li>
+</ul>
+<h3>Chain of Custody Irregularities</h3>
+<ul>
+<li><strong>Autopsy Evidence</strong>: Discrepancies in the handling and documentation of autopsy materials suggest potential tampering or misplacement, as noted in several documents.</li>
+</ul>
+<h3>Forensic Evidence Procedures</h3>
+<ul>
+<li><strong>Trajectory Analysis</strong>: Incomplete ballistic reports and inconsistencies in bullet trajectory analysis raise questions about the integrity of forensic procedures.</li>
+</ul>
+<h2>4. Witness Intimidation and Manipulation</h2>
+<h3>Treatment of Witnesses</h3>
+<ul>
+<li><strong>Ignored Testimonies</strong>: Witnesses who reported hearing shots from the grassy knoll or seeing suspicious individuals were often ignored or discredited in official reports.</li>
+</ul>
+<h3>Witness Deaths and Threats</h3>
+<ul>
+<li><strong>Unusual Circumstances</strong>: Several witnesses died under mysterious circumstances or reported receiving threats, suggesting potential intimidation to suppress contradictory testimonies.</li>
+</ul>
+<h3>Changes in Witness Statements</h3>
+<ul>
+<li><strong>Pressure on Witnesses</strong>: Some witnesses reported being pressured to alter their statements to align with the official narrative of a lone gunman.</li>
+</ul>
+<h2>5. Agency Involvement</h2>
+<h3>Suspicious Behaviors by Government Agencies</h3>
+<ul>
+<li><strong>CIA and FBI Surveillance</strong>: Documents indicate that both agencies had prior knowledge of Oswald's activities but failed to act, raising suspicions of deeper involvement or negligence.</li>
+</ul>
+<h3>Irregular Communication or Reporting</h3>
+<ul>
+<li><strong>Withheld Information</strong>: Reports of withheld or altered information by the CIA and FBI suggest possible efforts to control the narrative and limit exposure of their activities.</li>
+</ul>
+<h2>6. Strategic Assessment</h2>
+<h3>Potential Motives for a Coverup</h3>
+<ul>
+<li><strong>Geopolitical Context</strong>: The Cold War context and potential implications of Soviet or Cuban involvement could have motivated a coverup to prevent international conflict.</li>
+</ul>
+<h3>Beneficiaries of a Coverup</h3>
+<ul>
+<li><strong>Intelligence Agencies</strong>: Agencies like the CIA and FBI may have benefited from a coverup to protect their operations and avoid scrutiny over their surveillance failures.</li>
+</ul>
+<h2>7. Obstruction Patterns</h2>
+<h3>Procedural Irregularities</h3>
+<ul>
+<li><strong>Investigation Limitations</strong>: The Warren Commission's reliance on the FBI and CIA for information, despite potential conflicts of interest, suggests procedural flaws and possible obstruction.</li>
+</ul>
+<h3>Interference with Investigation Efforts</h3>
+<ul>
+<li><strong>Resource Allocation</strong>: Limited resources and focus on Oswald as the sole suspect may have hindered broader investigative efforts into potential conspiracies.</li>
+</ul>
+<h2>8. Final Analysis</h2>
+<h3>Synthesis of Coverup Evidence</h3>
+<ul>
+<li><strong>Scope and Coordination</strong>: The evidence suggests a coordinated effort to control the narrative, involving multiple agencies and possibly external entities, to maintain the lone gunman theory.</li>
+</ul>
+<h3>Key Objectives of Information Control</h3>
+<ul>
+<li><strong>National Security</strong>: Protecting national security interests and preventing public panic or international conflict appear to be primary objectives of the coverup efforts.</li>
+</ul>
+<h3>Definitive Assessment</h3>
+<ul>
+<li><strong>Coverup Implications</strong>: The analysis indicates significant evidence of a coverup, with strategic information control, suppression of contradictory evidence, and potential manipulation of witnesses and narratives to maintain the official story of a lone gunman.</li>
+</ul>
+<p><strong>Note</strong>: Due to the lack of specific document references with PDF links in the provided data, direct document citations are not included. For a comprehensive analysis, access to the original documents with PDF links is necessary.</p>
+                        </div>
+                        
+                        <footer>
+                            <p><em>Generated on 2025-03-18 23:53:49</em></p>
+                            <p>JFKReveal - AI Analysis of Declassified Documents</p>
+                        </footer>
+                    </div>
+                </body>
+                </html>
