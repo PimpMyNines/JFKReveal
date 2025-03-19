@@ -2,11 +2,11 @@
 
 ## Environment
 - You need to set up an OpenAI API key in the `.env` file
-- For local development, use the `text-embedding-ada-002` model instead of newer models
 - Environment variables can be set in `.env` file:
   - `OPENAI_API_KEY`: Your OpenAI API key
-  - `OPENAI_EMBEDDING_MODEL`: Model for embeddings (default: text-embedding-ada-002)
-  - `OPENAI_ANALYSIS_MODEL`: Model for analysis (default: gpt-4o)
+  - `OPENAI_EMBEDDING_MODEL`: Model for embeddings (default: text-embedding-3-large)
+  - `OPENAI_ANALYSIS_MODEL`: Model for analysis (default: gpt-4.5-preview)
+  - `GITHUB_API_KEY`: Your GitHub API key for repository operations
 
 ## Common Commands
 - `make setup`: Create virtual environment and install dependencies
@@ -69,30 +69,44 @@ The project follows a pipeline architecture:
 
 Each component can be run independently using the appropriate flags.
 
-## Fixes for OpenAI Embedding Issues
+## GitHub Pages Setup
 
-### Plan to complete reverting to OpenAI embeddings
+The project is configured with GitHub Pages to showcase the analysis reports:
 
-1. **Fix the document loading in vector_store.py**:
-   - There seems to be an issue with the JSON document format in `test_document.json` and `sample_document.json`
-   - Check the format and update the code to properly parse them
+1. **Page Structure**:
+   - GitHub Pages site is built from the `/docs` directory
+   - Analysis reports are available at `/docs/reports/`
+   - Main site is available at https://pimpmynines.github.io/JFKReveal/
 
-2. **Use function_calling method for LLM output parsing**:
-   - In `document_analyzer.py`, ensure all calls to `with_structured_output()` use `method="function_calling"`
-   - This fixes the schema validation issue with TopicSummary and DocumentAnalysisResult models
+2. **Content Organization**:
+   - `docs/index.html`: Main landing page
+   - `docs/reports/`: Contains all analysis HTML reports
+   - `docs/data/`: Contains analysis data in JSON format
+   - `docs/_config.yml`: Jekyll configuration file
 
-3. **Remove the metadata default value in the TopicSummary model**:
-   - Update the Pydantic model to fix the error: "In context=('properties', 'credibility'), 'default' is not permitted"
-   - The credibility field should not have a default value with OpenAI function calling
+3. **Theme Configuration**:
+   - Using the `minimal` theme for GitHub Pages
+   - Custom styling can be added through the theme's layout options
 
-4. **Ensure proper JSON processing for ChromaDB**:
-   - Update `filter_complex_metadata` to properly handle the list values in the metadata
-   - Make sure chunk_id is properly extracted from metadata
+4. **Updating the GitHub Pages Site**:
+   - Add new reports to the `docs/reports/` directory
+   - Commit and push changes to the `main` branch
+   - GitHub Pages will automatically rebuild and deploy the site
 
-5. **Clean up the database for fresh testing**:
-   - Remove the `data/vectordb` directory to start fresh
-   - This ensures dimensions and other DB settings are consistent
+## Repository Configuration
 
-6. **Verify OpenAI API key permission**:
-   - Ensure the API key in `.env` has access to the specified embedding model
-   - If needed, upgrade the account or request access to the embedding models
+1. **Branch Protection**:
+   - Main branch is protected with required reviews
+   - Direct pushes to main are restricted to repository owners
+   - All changes must go through pull requests
+
+2. **GitHub Actions**:
+   - Configured to run tests on pull requests
+   - Uses Python 3.10 environment
+   - Tests run with pytest
+   - Linting with flake8
+
+3. **Templates**:
+   - Issue template for bug reports and feature requests
+   - Pull request template with checklist
+   - CODEOWNERS file designating repository owners
