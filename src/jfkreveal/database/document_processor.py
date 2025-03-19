@@ -7,6 +7,7 @@ import logging
 import json
 from typing import List, Dict, Any, Optional, Tuple
 import hashlib
+import concurrent.futures
 
 import fitz  # PyMuPDF
 import nltk
@@ -29,7 +30,8 @@ class DocumentProcessor:
         input_dir: str = "data/raw", 
         output_dir: str = "data/processed",
         chunk_size: int = 1000,
-        chunk_overlap: int = 200
+        chunk_overlap: int = 200,
+        max_workers: int = None  # Number of parallel workers (None = CPU count)
     ):
         """
         Initialize the document processor.
@@ -39,11 +41,13 @@ class DocumentProcessor:
             output_dir: Directory to save processed chunks
             chunk_size: Target size of text chunks
             chunk_overlap: Overlap between chunks
+            max_workers: Maximum number of worker processes (None = CPU count)
         """
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.max_workers = max_workers
         
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -180,7 +184,7 @@ class DocumentProcessor:
     
     def process_all_documents(self) -> List[str]:
         """
-        Process all PDF documents in the input directory.
+        Process all PDF documents in the input directory in parallel.
         
         Returns:
             List of paths to all processed chunk files
@@ -194,12 +198,25 @@ class DocumentProcessor:
                     
         logger.info(f"Found {len(pdf_files)} PDF files to process")
         
-        # Process each file
         processed_files = []
-        for pdf_path in tqdm(pdf_files, desc="Processing PDFs"):
-            output_path = self.process_document(pdf_path)
-            if output_path:
-                processed_files.append(output_path)
+        
+        # Process documents in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Create future objects for each PDF file
+            future_to_pdf = {
+                executor.submit(self.process_document, pdf_path): pdf_path
+                for pdf_path in pdf_files
+            }
+            
+            # Process results as they complete
+            for future in tqdm(concurrent.futures.as_completed(future_to_pdf), total=len(pdf_files), desc="Processing PDFs"):
+                pdf_path = future_to_pdf[future]
+                try:
+                    output_path = future.result()
+                    if output_path:
+                        processed_files.append(output_path)
+                except Exception as e:
+                    logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
                 
         logger.info(f"Processed {len(processed_files)} documents")
         return processed_files
