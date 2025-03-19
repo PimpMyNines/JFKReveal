@@ -12,9 +12,184 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.exceptions import LangChainException
+from langchain_core.callbacks import BaseCallbackHandler
 import markdown
 
 logger = logging.getLogger(__name__)
+
+class ReportAuditLogCallback(BaseCallbackHandler):
+    """Callback handler for logging model thought process during report generation."""
+    
+    def __init__(self, output_dir: str = "data/audit_logs/reports", report_type: Optional[str] = None):
+        """
+        Initialize the report audit log callback.
+        
+        Args:
+            output_dir: Directory to save audit logs
+            report_type: Type of report (executive_summary, detailed_findings, etc.)
+        """
+        self.output_dir = output_dir
+        self.report_type = report_type
+        self.messages = []
+        self.current_analysis = {}
+        
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+    
+    def on_llm_start(self, serialized, prompts, **kwargs):
+        """Log when LLM starts processing."""
+        self.messages.append({
+            "event": "llm_start",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "prompts": prompts
+        })
+        
+    def on_llm_new_token(self, token, **kwargs):
+        """Log streaming tokens if available."""
+        self.messages.append({
+            "event": "llm_token",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "token": token
+        })
+        
+    def on_llm_end(self, response, **kwargs):
+        """Log when LLM finishes processing."""
+        self.messages.append({
+            "event": "llm_end",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "response": response.dict() if hasattr(response, "dict") else str(response)
+        })
+        
+        # Save the audit log
+        self._save_audit_log()
+    
+    def on_llm_error(self, error, **kwargs):
+        """Log any errors during LLM processing."""
+        self.messages.append({
+            "event": "llm_error",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "error": str(error)
+        })
+        
+        # Save the audit log on error as well
+        self._save_audit_log()
+    
+    def on_chain_start(self, serialized, inputs, **kwargs):
+        """Log when chain starts processing."""
+        # Store the current analysis inputs
+        self.current_analysis = inputs
+        
+        chain_type = serialized.get("name", "unknown")
+        self.messages.append({
+            "event": "chain_start",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "chain_type": chain_type,
+            "inputs": {k: v for k, v in inputs.items() if not k.startswith("analyses")} if any(k.startswith("analyses") for k in inputs) else inputs
+        })
+        
+        # Include analyses_summary in a separate field to keep logs cleaner
+        if "analyses_summary" in inputs:
+            self.messages.append({
+                "event": "analyses_summary",
+                "timestamp": self._get_timestamp(),
+                "report_type": self.report_type,
+                "analyses_summary": inputs["analyses_summary"]
+            })
+    
+    def on_chain_end(self, outputs, **kwargs):
+        """Log when chain ends processing."""
+        self.messages.append({
+            "event": "chain_end",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "outputs": outputs
+        })
+    
+    def on_chain_error(self, error, **kwargs):
+        """Log any errors during chain processing."""
+        self.messages.append({
+            "event": "chain_error",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "error": str(error)
+        })
+    
+    def on_tool_start(self, serialized, input_str, **kwargs):
+        """Log when a tool starts being used."""
+        self.messages.append({
+            "event": "tool_start",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "tool": serialized.get("name", "unknown"),
+            "input": input_str
+        })
+    
+    def on_tool_end(self, output, **kwargs):
+        """Log when a tool finishes being used."""
+        self.messages.append({
+            "event": "tool_end",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "output": output
+        })
+    
+    def on_tool_error(self, error, **kwargs):
+        """Log any errors during tool usage."""
+        self.messages.append({
+            "event": "tool_error",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "error": str(error)
+        })
+    
+    def on_text(self, text, **kwargs):
+        """Log any text output from intermediate steps."""
+        self.messages.append({
+            "event": "text",
+            "timestamp": self._get_timestamp(),
+            "report_type": self.report_type,
+            "text": text
+        })
+    
+    def _get_timestamp(self):
+        """Get the current timestamp."""
+        return datetime.datetime.now().isoformat()
+    
+    def _save_audit_log(self):
+        """Save the current audit log to file."""
+        if not self.messages:
+            return
+            
+        # Generate filename with timestamp and report_type if available
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_type_str = f"_{self.report_type}" if self.report_type else ""
+        filename = f"report_audit_log_{timestamp}{report_type_str}.json"
+        filepath = os.path.join(self.output_dir, filename)
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "audit_log": self.messages,
+                    "metadata": {
+                        "report_type": self.report_type,
+                        "timestamp": timestamp,
+                        "analysis_input": self.current_analysis
+                    }
+                }, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Saved report audit log to {filepath}")
+        except Exception as e:
+            logger.error(f"Error saving report audit log: {e}")
+            
+    def reset(self):
+        """Reset the callback's state."""
+        self.messages = []
+        self.current_analysis = {}
 
 class ExecutiveSummaryResponse(BaseModel):
     """Executive summary response from LLM."""
@@ -73,10 +248,19 @@ class FindingsReport:
         output_dir: str = "data/reports",
         raw_docs_dir: str = "data/raw",
         model_name: str = "gpt-4o",
+        model_provider: str = "openai",
         openai_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,
+        xai_api_key: Optional[str] = None,  # API key for xAI (Grok)
         temperature: float = 0.1,
         max_retries: int = 5,
-        pdf_base_url: str = "https://www.archives.gov/files/research/jfk/releases/2025/0318/",
+        # Use local PDF files instead of direct links to archives.gov
+        # Original source: "https://www.archives.gov/files/research/jfk/releases/2025/0318/"
+        pdf_base_url: str = "/data/documents/",
+        archive_citation: str = "National Archives, JFK Assassination Records",
+        audit_logs_dir: str = "data/audit_logs/reports",
+        enable_audit_logging: bool = True,
+        stream_tokens: bool = True,
     ):
         """
         Initialize the findings report generator.
@@ -85,42 +269,113 @@ class FindingsReport:
             analysis_dir: Directory containing analysis files
             output_dir: Directory to save reports
             raw_docs_dir: Directory containing raw PDF documents
-            model_name: OpenAI model to use
+            model_name: Model name to use for report generation
+            model_provider: Model provider to use ('openai' or 'anthropic')
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            anthropic_api_key: Anthropic API key (uses environment variable if not provided)
             temperature: Temperature for LLM generation
             max_retries: Maximum number of retries for API calls
             pdf_base_url: Base URL for PDF documents for generating links
+            audit_logs_dir: Directory to save audit logs
+            enable_audit_logging: Whether to enable detailed audit logging
+            stream_tokens: Whether to stream tokens in audit logs (only works with streaming=True)
         """
         self.analysis_dir = analysis_dir
         self.output_dir = output_dir
         self.raw_docs_dir = raw_docs_dir
         self.model_name = model_name
+        self.model_provider = model_provider.lower()
         self.temperature = temperature
         self.max_retries = max_retries
         self.pdf_base_url = pdf_base_url
+        self.archive_citation = archive_citation
+        self.audit_logs_dir = audit_logs_dir
+        self.enable_audit_logging = enable_audit_logging
+        self.stream_tokens = stream_tokens
+        self.xai_api_key = xai_api_key
         
-        # Create output directory
+        if self.model_provider not in ["openai", "anthropic", "xai"]:
+            logger.warning(f"Unknown model provider: {model_provider}. Defaulting to 'openai'.")
+            self.model_provider = "openai"
+        
+        # Create output directories
         os.makedirs(output_dir, exist_ok=True)
+        if enable_audit_logging:
+            os.makedirs(audit_logs_dir, exist_ok=True)
+            logger.info(f"Audit logging enabled for reports. Logs will be saved to {audit_logs_dir}")
         
-        # Initialize LangChain model
-        self.llm = ChatOpenAI(
-            model=model_name,
-            temperature=temperature,
-            api_key=openai_api_key,
-            max_retries=max_retries,
-        )
+        # Initialize audit logger callbacks
+        self.audit_callbacks = {}
+        if enable_audit_logging:
+            for report_type in ["executive_summary", "detailed_findings", "suspects_analysis", "coverup_analysis"]:
+                self.audit_callbacks[report_type] = ReportAuditLogCallback(
+                    output_dir=audit_logs_dir,
+                    report_type=report_type
+                )
+        
+        # Initialize LangChain model based on provider (without callbacks - will be added per report generation)
+        if self.model_provider == "anthropic":
+            # Import Anthropic if needed
+            from langchain_anthropic import ChatAnthropic
+            
+            self.llm = ChatAnthropic(
+                model=model_name,
+                temperature=temperature,
+                anthropic_api_key=anthropic_api_key,
+                max_retries=max_retries,
+                streaming=stream_tokens,  # Enable streaming for token-by-token audit logs
+            )
+            logger.info(f"Initialized Anthropic model for report generation: {model_name}")
+        elif self.model_provider == "xai":
+            # Import xAI (Grok) integration
+            try:
+                # Note: This is a hypothetical import - may need to adjust based on actual LangChain integration
+                from langchain_xai import ChatXAI
+                
+                self.llm = ChatXAI(
+                    model=model_name,
+                    temperature=temperature,
+                    api_key=xai_api_key,
+                    max_retries=max_retries,
+                    streaming=stream_tokens,
+                )
+                logger.info(f"Initialized xAI Grok model for report generation: {model_name}")
+            except ImportError:
+                logger.warning("LangChain xAI integration not available. Falling back to OpenAI.")
+                from langchain_openai import ChatOpenAI
+                
+                self.llm = ChatOpenAI(
+                    model=model_name,
+                    temperature=temperature,
+                    api_key=openai_api_key,
+                    max_retries=max_retries,
+                    streaming=stream_tokens,
+                )
+                logger.info(f"Fallback: Initialized OpenAI model: {model_name}")
+        else:
+            # Import OpenAI
+            from langchain_openai import ChatOpenAI
+            
+            self.llm = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                api_key=openai_api_key,
+                max_retries=max_retries,
+                streaming=stream_tokens,  # Enable streaming for token-by-token audit logs
+            )
+            logger.info(f"Initialized OpenAI model for report generation: {model_name}")
         
         # Build document ID to PDF URL mapping
         self.document_urls = self._build_document_urls()
     
-    def _build_document_urls(self) -> Dict[str, str]:
+    def _build_document_urls(self) -> Dict[str, Dict[str, str]]:
         """
-        Build a mapping of document IDs to their PDF URLs.
+        Build a mapping of document IDs to their PDF URLs and citation info.
         
         Returns:
-            Dictionary mapping document IDs to their PDF URLs
+            Dictionary mapping document IDs to their metadata (PDF URL and citation)
         """
-        document_urls = {}
+        document_metadata = {}
         
         # Get list of PDF files in raw documents directory
         if os.path.exists(self.raw_docs_dir):
@@ -128,19 +383,24 @@ class FindingsReport:
                 if file.endswith('.pdf'):
                     # Remove extension to get document ID
                     doc_id = os.path.splitext(file)[0]
-                    # Create URL
+                    # Create local URL path
                     pdf_url = f"{self.pdf_base_url}{file}"
-                    document_urls[doc_id] = pdf_url
+                    # Add citation info
+                    document_metadata[doc_id] = {
+                        "url": pdf_url,
+                        "citation": f"{self.archive_citation}, Document {doc_id}",
+                        "original_source": "National Archives, JFK Assassination Records"
+                    }
         
-        logger.info(f"Built URL mapping for {len(document_urls)} documents")
-        return document_urls
+        logger.info(f"Built URL and citation mapping for {len(document_metadata)} documents")
+        return document_metadata
     
     def load_analyses(self) -> List[Dict[str, Any]]:
         """
         Load all analysis files.
         
         Returns:
-            List of analysis data with added PDF links
+            List of analysis data with added PDF links and citation info
         """
         analyses = []
         
@@ -153,26 +413,38 @@ class FindingsReport:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         analysis = json.load(f)
                         
-                        # Add PDF URLs to documents referenced in the analysis
+                        # Add PDF URLs and citation info to documents referenced in the analysis
                         if "documents" in analysis:
                             for i, doc in enumerate(analysis["documents"]):
                                 doc_id = doc.get("document_id")
                                 if doc_id and doc_id in self.document_urls:
-                                    analysis["documents"][i]["pdf_url"] = self.document_urls[doc_id]
+                                    doc_metadata = self.document_urls[doc_id]
+                                    analysis["documents"][i]["pdf_url"] = doc_metadata["url"]
+                                    analysis["documents"][i]["citation"] = doc_metadata["citation"]
+                                    analysis["documents"][i]["original_source"] = doc_metadata["original_source"]
                         
-                        # Add PDF URLs to additional evidence
+                        # Add PDF URLs and citation info to additional evidence
                         if "additional_evidence" in analysis:
                             for i, evidence in enumerate(analysis["additional_evidence"]):
                                 if isinstance(evidence, dict) and "document_id" in evidence:
                                     doc_id = evidence["document_id"]
                                     if doc_id in self.document_urls:
-                                        analysis["additional_evidence"][i]["pdf_url"] = self.document_urls[doc_id]
+                                        doc_metadata = self.document_urls[doc_id]
+                                        analysis["additional_evidence"][i]["pdf_url"] = doc_metadata["url"]
+                                        analysis["additional_evidence"][i]["citation"] = doc_metadata["citation"]
+                                        analysis["additional_evidence"][i]["original_source"] = doc_metadata["original_source"]
+                        
+                        # Add model information to the analysis for comparison
+                        analysis["model_info"] = {
+                            "provider": self.model_provider,
+                            "model": self.model_name
+                        }
                         
                         analyses.append(analysis)
                 except Exception as e:
                     logger.error(f"Error loading analysis file {file_path}: {e}")
         
-        logger.info(f"Loaded {len(analyses)} analysis files with PDF links")
+        logger.info(f"Loaded {len(analyses)} analysis files with PDF links and citations")
         return analyses
     
     @retry(
@@ -190,6 +462,34 @@ class FindingsReport:
         Returns:
             Executive summary markdown text
         """
+        # Configure LLM with audit logger if enabled
+        if self.enable_audit_logging:
+            # Reset the callback for this new report
+            self.audit_callbacks["executive_summary"].reset()
+            # Create a new LLM instance with the callback based on provider
+            if self.model_provider == "anthropic":
+                from langchain_anthropic import ChatAnthropic
+                llm_with_callback = ChatAnthropic(
+                    model=self.model_name,
+                    temperature=self.temperature,
+                    max_retries=self.max_retries,
+                    callbacks=[self.audit_callbacks["executive_summary"]],
+                    streaming=self.stream_tokens,
+                )
+            else:
+                from langchain_openai import ChatOpenAI
+                llm_with_callback = ChatOpenAI(
+                    model=self.model_name,
+                    temperature=self.temperature,
+                    max_retries=self.max_retries,
+                    callbacks=[self.audit_callbacks["executive_summary"]],
+                    streaming=self.stream_tokens,
+                )
+            logger.info("Generating executive summary with audit logging")
+        else:
+            # Use the default LLM without audit logging
+            llm_with_callback = self.llm
+        
         # Create a summary of all the analyses
         analyses_summary = []
         for analysis in analyses:
@@ -205,7 +505,7 @@ class FindingsReport:
             }
             analyses_summary.append(topic_summary)
         
-        # Create prompt template
+        # Create prompt template with thought process instructions
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
 
@@ -219,7 +519,9 @@ You must adhere to these non-negotiable guidelines:
 
 3. Information Constraints: If information is not explicitly found in the source material, you must respond with 'Insufficient data available' rather than filling in gaps. Do not generate information beyond what is documented in official records. If a claim lacks direct source support, state 'No evidence found in available documents' rather than speculating.
 
-4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
+4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy.
+
+5. Thought Process Documentation: Document your thought process as you analyze the information across all document analyses. Include your reasoning for identifying key patterns, assessment of evidence credibility, how you determined the most significant findings, and your methodology for evaluating competing theories. This will create an audit trail of your executive-level analytical approach."""),
             ("human", """
             Based on the following analyses of declassified JFK documents, create a comprehensive executive summary.
             
@@ -257,18 +559,27 @@ You must adhere to these non-negotiable guidelines:
             Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
             Ensure the language is professional, highly detailed, and structured for clarity.
             
+            As you work through this analysis, document your thought process. For each section:
+            1. Begin by stating what you're looking to establish in this section
+            2. Explain how you're evaluating and synthesizing information across topics
+            3. Detail your reasoning for emphasizing certain findings over others
+            4. Document your methodology for determining the credibility of competing theories
+            5. Explain your process for connecting separate pieces of evidence into coherent patterns
+            
             Before finalizing your report, you MUST perform a self-audit:
             1. Identify any unverified claims and mark them as such
             2. Correct any inconsistencies and contradictions 
             3. Highlight areas requiring further evidence
             4. Verify that every claim has proper source attribution
             5. Confirm you've distinguished clearly between facts and speculation
+            
+            This detailed thought process will be captured in the audit log and provide insight into your executive summary methodology.
             """)
         ])
         
         try:
             # First try to get structured output
-            chain = prompt_template | self.llm.with_structured_output(
+            chain = prompt_template | llm_with_callback.with_structured_output(
                 ExecutiveSummaryResponse,
                 method="function_calling"
             )
@@ -297,7 +608,7 @@ You must adhere to these non-negotiable guidelines:
             logger.warning(f"Error generating structured executive summary: {e}. Falling back to text generation.")
             
             # Fall back to unstructured text generation
-            unstructured_chain = prompt_template | self.llm
+            unstructured_chain = prompt_template | llm_with_callback
             
             # Run the chain with unstructured output
             response = unstructured_chain.invoke({
@@ -740,7 +1051,15 @@ You must adhere to these non-negotiable guidelines:
             logger.error("No analyses found. Cannot generate report.")
             return {"error": "No analyses found"}
         
-        # Generate report sections
+        # Create model-specific output directory
+        model_dir = os.path.join(self.output_dir, f"{self.model_provider}_{self.model_name}")
+        os.makedirs(model_dir, exist_ok=True)
+        logger.info(f"Creating model-specific output directory: {model_dir}")
+        
+        # Generate report sections with audit logging
+        logger.info(f"Starting report generation with {self.model_provider} {self.model_name}")
+        
+        # Generate each report section with appropriate audit logging
         executive_summary = self.generate_executive_summary(analyses)
         detailed_findings = self.generate_detailed_findings(analyses)
         suspects_analysis = self.generate_suspects_analysis(analyses)
@@ -754,32 +1073,77 @@ You must adhere to these non-negotiable guidelines:
             "coverup_analysis": coverup_analysis
         }
         
-        # Save each section as markdown
+        # Save each section as markdown and copy audit logs
         for section_name, content in report.items():
-            output_file = os.path.join(self.output_dir, f"{section_name}.md")
+            # Save markdown in model-specific directory
+            output_file = os.path.join(model_dir, f"{section_name}.md")
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(content)
             logger.info(f"Saved {section_name} to {output_file}")
             
-            # Also save as HTML
-            html_output = os.path.join(self.output_dir, f"{section_name}.html")
+            # Also save to main output directory for backward compatibility
+            main_output_file = os.path.join(self.output_dir, f"{section_name}.md")
+            with open(main_output_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # Copy audit logs to reports directory if enabled
+            if self.enable_audit_logging:
+                # Save audit logs in model-specific directory
+                audit_file = os.path.join(model_dir, f"{section_name}_audit.json")
+                try:
+                    with open(audit_file, 'w', encoding='utf-8') as f:
+                        json.dump({
+                            "report_type": section_name,
+                            "model_info": {
+                                "provider": self.model_provider,
+                                "model": self.model_name
+                            },
+                            "audit_log": self.audit_callbacks[section_name].messages,
+                            "timestamp": datetime.datetime.now().isoformat()
+                        }, f, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved {section_name} audit log to {audit_file}")
+                except Exception as e:
+                    logger.error(f"Error saving audit log for {section_name}: {e}")
+            
+            # Save HTML in both model-specific directory and main directory
+            model_html_output = os.path.join(model_dir, f"{section_name}.html")
+            main_html_output = os.path.join(self.output_dir, f"{section_name}.html")
+            
             html_content = markdown.markdown(content, extensions=['tables', 'fenced_code'])
-            with open(html_output, 'w', encoding='utf-8') as f:
-                f.write(f"""<!DOCTYPE html>
-                <html>
+            
+            # Prepare the HTML content with modern UI
+            html_template = f"""<!DOCTYPE html>
+                <html lang="en">
                 <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>JFK Assassination Analysis - {section_name.replace('_', ' ').title()}</title>
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Special+Elite:wght@400&display=swap" rel="stylesheet">
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
                     <style>
                         :root {{
                             --primary: #c41e3a;
+                            --primary-dark: #a01830;
+                            --primary-light: #f0c0c0;
                             --secondary: #0a3161;
+                            --secondary-dark: #062142;
+                            --secondary-light: #b3c5e1;
                             --text: #333;
-                            --light: #f5f5f5;
-                            --dark: #222;
+                            --light: #f8f9fa;
+                            --dark: #212529;
                             --accent: #8a8d93;
+                            --success: #28a745;
+                            --info: #17a2b8;
+                            --warning: #ffc107;
+                            --danger: #dc3545;
+                            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                            --font-special: 'Special Elite', monospace;
+                            --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+                            --shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+                            --shadow-lg: 0 1rem 3rem rgba(0,0,0,.175);
+                            --radius: 0.5rem;
                         }}
                         
                         * {{
@@ -986,6 +1350,28 @@ You must adhere to these non-negotiable guidelines:
         with open(combined_output, 'w', encoding='utf-8') as f:
             f.write(combined_report)
         logger.info(f"Saved combined report to {combined_output}")
+        
+        # Save combined audit logs if enabled
+        if self.enable_audit_logging:
+            combined_audit_file = os.path.join(self.output_dir, "full_report_audit.json")
+            try:
+                combined_audit_logs = {
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "sections": {}
+                }
+                
+                # Collect audit logs from each section
+                for section_name in ["executive_summary", "detailed_findings", "suspects_analysis", "coverup_analysis"]:
+                    combined_audit_logs["sections"][section_name] = {
+                        "thought_process": [msg for msg in self.audit_callbacks[section_name].messages if msg.get("event") in ["text", "llm_token", "chain_start", "chain_end"]],
+                        "event_count": len(self.audit_callbacks[section_name].messages)
+                    }
+                
+                with open(combined_audit_file, 'w', encoding='utf-8') as f:
+                    json.dump(combined_audit_logs, f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved combined audit logs to {combined_audit_file}")
+            except Exception as e:
+                logger.error(f"Error saving combined audit logs: {e}")
         
         # Save as HTML
         html_output = os.path.join(self.output_dir, "full_report.html")
@@ -1255,9 +1641,15 @@ You must adhere to these non-negotiable guidelines:
                     <footer>
                         <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
                         <p>JFKReveal - AI Analysis of Declassified Documents</p>
+                        {f'<p><a href="full_report_audit.json" style="color: white; text-decoration: underline;">View Analysis Audit Log</a></p>' if self.enable_audit_logging else ''}
                     </footer>
                 </div>
             </body>
             </html>""")
         
+        if self.enable_audit_logging:
+            logger.info("Completed full report generation with detailed audit logging")
+        else:
+            logger.info("Completed full report generation")
+            
         return report

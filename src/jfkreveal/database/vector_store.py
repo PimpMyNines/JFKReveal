@@ -27,6 +27,7 @@ class VectorStore:
         persist_directory: str = "data/vectordb",
         embedding_model: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        xai_api_key: Optional[str] = None,
     ):
         """
         Initialize the vector store.
@@ -35,6 +36,7 @@ class VectorStore:
             persist_directory: Directory to persist the vector database
             embedding_model: OpenAI embedding model to use
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            xai_api_key: X AI API key (for future X AI embedding models)
         """
         self.persist_directory = persist_directory
         

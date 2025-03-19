@@ -35,7 +35,10 @@ class JFKReveal:
     def __init__(
         self,
         base_dir: str = ".",
-        openai_api_key: Optional[str] = None
+        openai_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,
+        xai_api_key: Optional[str] = None,
+        model_provider: str = "openai"
     ):
         """
         Initialize the JFK document analysis pipeline.
@@ -43,9 +46,19 @@ class JFKReveal:
         Args:
             base_dir: Base directory for data
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            anthropic_api_key: Anthropic API key (uses environment variable if not provided)
+            xai_api_key: X AI (Grok) API key (uses environment variable if not provided)
+            model_provider: Model provider to use ('openai', 'anthropic', or 'xai')
         """
         self.base_dir = base_dir
         self.openai_api_key = openai_api_key
+        self.anthropic_api_key = anthropic_api_key
+        self.xai_api_key = xai_api_key
+        self.model_provider = model_provider.lower()
+        
+        if self.model_provider not in ["openai", "anthropic", "xai"]:
+            logger.warning(f"Unknown model provider: {model_provider}. Defaulting to 'openai'.")
+            self.model_provider = "openai"
         
         # Create data directories
         os.makedirs(os.path.join(base_dir, "data/raw"), exist_ok=True)
@@ -86,9 +99,16 @@ class JFKReveal:
         logger.info("Starting vector database build")
         
         try:
+            # For now we still use OpenAI embeddings even with Anthropic or XAI
+            # This is because alternative embeddings are handled differently or not yet available
+            embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+            logger.info(f"Using embedding model: {embedding_model}")
+            
             vector_store = VectorStore(
                 persist_directory=os.path.join(self.base_dir, "data/vectordb"),
-                openai_api_key=self.openai_api_key
+                embedding_model=embedding_model,
+                openai_api_key=self.openai_api_key,
+                xai_api_key=self.xai_api_key
             )
             
             total_chunks = vector_store.add_all_documents(
@@ -107,17 +127,50 @@ class JFKReveal:
         """Analyze documents and generate topic analyses."""
         logger.info("Starting document analysis")
         
-        # Get model name from environment variables if set
-        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
-        
-        analyzer = DocumentAnalyzer(
-            vector_store=vector_store,
-            output_dir=os.path.join(self.base_dir, "data/analysis"),
-            model_name=model_name,
-            openai_api_key=self.openai_api_key,
-            temperature=0.0,
-            max_retries=5
-        )
+        if self.model_provider == "anthropic":
+            # Get model name from environment variables if set
+            model_name = os.environ.get("ANTHROPIC_ANALYSIS_MODEL", "claude-3-7-sonnet-20240620")
+            logger.info(f"Using Anthropic model: {model_name}")
+            
+            analyzer = DocumentAnalyzer(
+                vector_store=vector_store,
+                output_dir=os.path.join(self.base_dir, "data/analysis"),
+                model_name=model_name,
+                model_provider="anthropic",
+                anthropic_api_key=self.anthropic_api_key,
+                openai_api_key=self.openai_api_key,  # Still include for embedding fallback
+                temperature=0.0,
+                max_retries=5
+            )
+        elif self.model_provider == "xai":
+            # Get model name from environment variables if set
+            model_name = os.environ.get("XAI_ANALYSIS_MODEL", "grok-2")
+            logger.info(f"Using X AI (Grok) model: {model_name}")
+            
+            analyzer = DocumentAnalyzer(
+                vector_store=vector_store,
+                output_dir=os.path.join(self.base_dir, "data/analysis"),
+                model_name=model_name,
+                model_provider="xai",
+                xai_api_key=self.xai_api_key,
+                openai_api_key=self.openai_api_key,  # Still include for embedding fallback
+                temperature=0.0,
+                max_retries=5
+            )
+        else:
+            # Get model name from environment variables if set
+            model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+            logger.info(f"Using OpenAI model: {model_name}")
+            
+            analyzer = DocumentAnalyzer(
+                vector_store=vector_store,
+                output_dir=os.path.join(self.base_dir, "data/analysis"),
+                model_name=model_name,
+                model_provider="openai",
+                openai_api_key=self.openai_api_key,
+                temperature=0.0,
+                max_retries=5
+            )
         
         topic_analyses = analyzer.analyze_key_topics()
         
@@ -128,11 +181,41 @@ class JFKReveal:
         """Generate final report from analysis results."""
         logger.info("Starting report generation")
         
-        report_generator = FindingsReport(
-            analysis_dir=os.path.join(self.base_dir, "data/analysis"),
-            output_dir=os.path.join(self.base_dir, "data/reports"),
-            openai_api_key=self.openai_api_key
-        )
+        if self.model_provider == "anthropic":
+            model_name = os.environ.get("ANTHROPIC_REPORT_MODEL", "claude-3-7-sonnet-20240620")
+            logger.info(f"Using Anthropic model for report generation: {model_name}")
+            
+            report_generator = FindingsReport(
+                analysis_dir=os.path.join(self.base_dir, "data/analysis"),
+                output_dir=os.path.join(self.base_dir, "data/reports"),
+                model_name=model_name,
+                model_provider="anthropic",
+                anthropic_api_key=self.anthropic_api_key,
+                openai_api_key=self.openai_api_key  # Include for backward compatibility
+            )
+        elif self.model_provider == "xai":
+            model_name = os.environ.get("XAI_REPORT_MODEL", "grok-2")
+            logger.info(f"Using X AI (Grok) model for report generation: {model_name}")
+            
+            report_generator = FindingsReport(
+                analysis_dir=os.path.join(self.base_dir, "data/analysis"),
+                output_dir=os.path.join(self.base_dir, "data/reports"),
+                model_name=model_name,
+                model_provider="xai",
+                xai_api_key=self.xai_api_key,
+                openai_api_key=self.openai_api_key  # Include for embedding fallback
+            )
+        else:
+            model_name = os.environ.get("OPENAI_REPORT_MODEL", "gpt-4o")
+            logger.info(f"Using OpenAI model for report generation: {model_name}")
+            
+            report_generator = FindingsReport(
+                analysis_dir=os.path.join(self.base_dir, "data/analysis"),
+                output_dir=os.path.join(self.base_dir, "data/reports"),
+                model_name=model_name,
+                model_provider="openai",
+                openai_api_key=self.openai_api_key
+            )
         
         report = report_generator.generate_full_report()
         
@@ -201,6 +284,12 @@ def main():
                         help="Base directory for data storage")
     parser.add_argument("--openai-api-key", type=str,
                         help="OpenAI API key (uses env var OPENAI_API_KEY if not provided)")
+    parser.add_argument("--anthropic-api-key", type=str,
+                        help="Anthropic API key (uses env var ANTHROPIC_API_KEY if not provided)")
+    parser.add_argument("--xai-api-key", type=str,
+                        help="X AI (Grok) API key (uses env var XAI_API_KEY if not provided)")
+    parser.add_argument("--model-provider", type=str, default="openai", choices=["openai", "anthropic", "xai"],
+                        help="Model provider to use (openai, anthropic, or xai)")
     parser.add_argument("--skip-scraping", action="store_true",
                         help="Skip document scraping")
     parser.add_argument("--skip-processing", action="store_true",
@@ -213,7 +302,10 @@ def main():
     # Run pipeline
     jfk_reveal = JFKReveal(
         base_dir=args.base_dir,
-        openai_api_key=args.openai_api_key
+        openai_api_key=args.openai_api_key,
+        anthropic_api_key=args.anthropic_api_key,
+        xai_api_key=args.xai_api_key,
+        model_provider=args.model_provider
     )
     
     report_path = jfk_reveal.run_pipeline(
