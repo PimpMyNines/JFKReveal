@@ -160,29 +160,43 @@ class FindingsReport:
         
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Create a comprehensive executive summary in Markdown format."),
+            ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
+
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
             ("human", """
-            You are an expert analyst tasked with creating an executive summary of findings from the JFK assassination documents.
-            
             Based on the following analyses of declassified JFK documents, create a comprehensive executive summary.
             
             ANALYSES SUMMARY:
             {analyses_summary}
             
-            Your executive summary should:
+            Your executive summary should include:
             
-            1. Provide an overview of the key findings across all analyzed topics
-            2. Highlight the most significant evidence related to the assassination
-            3. Discuss potential government involvement or coverup with specific evidence
-            4. Address the most credible theories based on document evidence
-            5. Identify the most likely culprit(s) based on the evidence
-            6. Present alternative suspects with supporting evidence
-            7. Discuss any patterns of redaction or information withholding
-            8. Evaluate the overall credibility and completeness of the documents
+            1. Introduction & Scope
+                • Purpose of the investigation
+                • Sources of evidence and methodology used in analysis
+            
+            2. Key Findings Overview
+                • Most significant evidence related to the assassination
+                • Potential government involvement or coverup with specific evidence
+                • Most credible theories based on document evidence
+            
+            3. Key Suspects Assessment
+                • Most likely culprit(s) based on the evidence with reasoning
+                • Alternative suspects with supporting evidence
+            
+            4. Document Analysis
+                • Patterns of redaction or information withholding
+                • Evaluation of overall credibility and completeness of the documents
+            
+            5. Final Assessment
+                • Most likely scenario based on all available evidence
+                • Unresolved questions that demand further investigation
             
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, bullet points, and emphasis.
             Include specific document references for key claims where possible.
-            BE OBJECTIVE AND FACTUAL, but do not hesitate to draw reasonable conclusions from the evidence.
+            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
+            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
+            Ensure the language is professional, highly detailed, and structured for clarity.
             """)
         ])
         
@@ -246,31 +260,59 @@ class FindingsReport:
         """
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Create a comprehensive detailed report in Markdown format."),
+            ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
+
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
             ("human", """
-            You are an expert analyst tasked with creating a detailed findings report from the JFK assassination documents.
-            
-            Based on the following analyses of declassified JFK documents, create a comprehensive detailed report.
+            Based on the following analyses of declassified JFK documents, create a comprehensive detailed findings report.
             
             ANALYSES:
             {analyses}
             
-            Your detailed report should:
+            Your detailed report should include:
             
-            1. Provide an in-depth examination of each key topic
-            2. Present a chronological timeline of events based on the documents
-            3. Detail the roles and actions of key individuals and agencies
-            4. Analyze the evidence for various assassination theories
-            5. Examine inconsistencies and contradictions in official accounts
-            6. Identify patterns of information withholding or redaction
-            7. Evaluate the credibility of different pieces of evidence
-            8. Draw reasoned conclusions about the most likely scenarios
-            9. Identify the most likely culprit(s) with supporting evidence
-            10. Present alternative suspects with detailed analysis of their potential involvement
+            1. Historical Context & Key Figures
+                • Overview of JFK's presidency and political climate
+                • Key individuals involved (Lee Harvey Oswald, Jack Ruby, government officials, intelligence agencies, etc.)
+            
+            2. Chronological Timeline
+                • Present a detailed chronological timeline of events based on the documents
+                • Highlight critical moments before, during, and after the assassination
+            
+            3. Analysis of Declassified Documents
+                • In-depth examination of each key topic
+                • Summary of crucial documents and their significance
+                • Identification of redactions, inconsistencies, or contradictions in official records
+            
+            4. Key Individuals and Agencies
+                • Detail the roles and actions of key individuals and agencies
+                • Behavioral analysis of key individuals before, during, and after the assassination
+            
+            5. Forensic Analysis
+                • Breakdown of bullet trajectories, wounds, and impact reports if available
+                • Analysis of the 'single bullet theory' vs. alternative explanations
+                • Possible inconsistencies in forensic evidence
+            
+            6. Evidentiary Assessment
+                • Examine inconsistencies and contradictions in official accounts
+                • Identify patterns of information withholding or redaction
+                • Evaluate the credibility of different pieces of evidence
+            
+            7. Theories and Scenarios
+                • Analyze the evidence for various assassination theories
+                • Draw reasoned conclusions about the most likely scenarios
+                • Evaluate official Warren Commission conclusions and their flaws
+            
+            8. Suspects Evaluation
+                • Identify the most likely culprit(s) with supporting evidence
+                • Present alternative suspects with detailed analysis of their potential involvement
+                • Assess possible collaborations between suspects
             
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
             Include specific document references (document_id) for all key claims.
-            BE OBJECTIVE AND FACTUAL, but do not hesitate to draw reasonable conclusions from the evidence.
+            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
+            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
+            Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
             """)
         ])
         
@@ -309,34 +351,61 @@ class FindingsReport:
         """
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Create a comprehensive analysis of potential suspects in Markdown format."),
+            ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
+
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
             ("human", """
-            You are an expert analyst tasked with analyzing potential suspects in the JFK assassination.
-            
-            Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential suspects.
+            Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential suspects in the assassination.
             
             ANALYSES:
             {analyses}
             
-            Your suspects analysis should:
+            Your suspects analysis should include:
             
-            1. Identify the most likely primary culprit(s) based on document evidence
-            2. Provide detailed supporting evidence for this conclusion
-            3. Analyze the strength of evidence against this suspect/group
-            4. Identify gaps or weaknesses in the case against them
-            5. Present alternative suspects in order of likelihood
-            6. For each alternative suspect:
-               - Summarize the evidence implicating them
-               - Assess the credibility of this evidence
-               - Identify contradicting evidence
-               - Evaluate their capability and motive
-            7. Analyze possible collaborations between suspects
-            8. Assess government knowledge or involvement in the assassination
-            9. Evaluate the evidence for conspiracy vs. lone gunman theories
+            1. Primary Suspects Assessment
+                • Identify the most likely primary culprit(s) based on document evidence
+                • Provide detailed supporting evidence for this conclusion, with specific document references
+                • Analyze the strength of evidence against this suspect/group
+                • Identify gaps or weaknesses in the case against them
+            
+            2. Alternative Suspects
+                • Present alternative suspects in order of likelihood
+                • For each alternative suspect:
+                   - Summarize the evidence implicating them
+                   - Assess the credibility of this evidence
+                   - Identify contradicting evidence
+                   - Evaluate their capability and motive
+                   - Assess their connections to other key figures
+            
+            3. Conspiracy Analysis
+                • Analyze possible collaborations between suspects
+                • Evaluate the evidence for conspiracy vs. lone gunman theories
+                • Assess possible operational logistics of coordinated action
+                • Identify communication patterns or meetings between potential conspirators
+            
+            4. Government Connection Assessment
+                • Assess government knowledge or involvement in the assassination
+                • Examine evidence of foreknowledge
+                • Analyze unusual behavior by agencies before and after the assassination
+                • Evaluate the handling of the investigation by government entities
+            
+            5. Psychological Profiles
+                • Analyze the behavioral patterns of key suspects
+                • Assess psychological motivations and capabilities
+                • Evaluate consistency with known psychological profiles
+                • Identify suspicious behavior changes before or after the assassination
+            
+            6. Final Assessment
+                • Synthesize all evidence into a cohesive theory
+                • Rank the likelihood of different suspect scenarios
+                • Identify missing evidence that would strengthen or refute the case
+                • Provide a final judgment on the most likely perpetrator(s)
             
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
             Include specific document references (document_id) for all key claims.
-            BE OBJECTIVE AND FACTUAL, but do not hesitate to draw reasonable conclusions from the evidence.
+            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
+            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
+            Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
             """)
         ])
         
@@ -424,31 +493,70 @@ class FindingsReport:
         """
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert analyst examining declassified JFK assassination documents. Create a comprehensive analysis of potential coverups in Markdown format."),
+            ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
+
+Your task is to conduct a comprehensive investigation, analyzing all available evidence with a critical and objective approach. You must identify inconsistencies, patterns, missing links, and possible cover-ups while synthesizing key information into a highly detailed, structured report."""),
             ("human", """
-            You are an expert analyst tasked with analyzing potential coverups in the JFK assassination.
-            
-            Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential coverups.
+            Based on the following analyses of declassified JFK documents, create a comprehensive analysis of potential coverups related to the assassination.
             
             ANALYSES:
             {analyses}
             
-            Your coverup analysis should:
+            Your coverup analysis should include:
             
-            1. Identify evidence of information suppression or tampering
-            2. Analyze patterns of redaction across documents
-            3. Identify inconsistencies in official narratives
-            4. Examine the timeline of information releases and their context
-            5. Analyze suspicious behaviors by government agencies
-            6. Identify disappearance or destruction of evidence
-            7. Examine treatment of witnesses and their testimonies
-            8. Analyze unusual classification or handling of documents
-            9. Identify potential motives for a coverup
-            10. Evaluate which entities would have benefited from a coverup
+            1. Information Control Assessment
+                • Identify evidence of information suppression or tampering
+                • Analyze patterns of redaction across documents
+                • Examine strategic timing of information releases and their context
+                • Analyze unusual classification or handling of documents
+            
+            2. Narrative Inconsistencies
+                • Identify contradictions in official narratives
+                • Track changes in official statements over time
+                • Compare public statements against internal documents
+                • Analyze selective emphasis or omission of critical facts
+            
+            3. Evidence Handling Analysis
+                • Document disappearance or destruction of evidence
+                • Identify chain of custody irregularities
+                • Analyze forensic evidence procedures and integrity
+                • Evaluate evidence collection protocols and deviations
+            
+            4. Witness Intimidation and Manipulation
+                • Examine treatment of witnesses and their testimonies
+                • Document witness deaths, threats, or unusual circumstances
+                • Analyze changes in witness statements over time
+                • Identify patterns of pressure or incentives offered to witnesses
+            
+            5. Agency Involvement
+                • Analyze suspicious behaviors by government agencies
+                • Identify unusual operational patterns before and after the assassination
+                • Document irregular communication or reporting procedures
+                • Examine deviations from standard protocols
+            
+            6. Strategic Assessment
+                • Identify potential motives for a coverup
+                • Evaluate which entities would have benefited from a coverup
+                • Analyze geopolitical and domestic political contexts
+                • Assess impact on national security narratives and policies
+            
+            7. Obstruction Patterns
+                • Identify procedural irregularities in the investigations
+                • Document interference with investigation efforts
+                • Analyze resource allocation and investigative priorities
+                • Examine premature conclusion of investigative avenues
+            
+            8. Final Analysis
+                • Synthesize evidence of coverup activities
+                • Assess the scope and coordination of coverup efforts
+                • Evaluate the key objectives of information control
+                • Provide a definitive assessment of coverup evidence and implications
             
             FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
             Include specific document references (document_id) for all key claims.
-            BE OBJECTIVE AND FACTUAL, but do not hesitate to draw reasonable conclusions from the evidence.
+            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
+            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
+            Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
             """)
         ])
         
@@ -559,25 +667,193 @@ class FindingsReport:
                 <html>
                 <head>
                     <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>JFK Assassination Analysis - {section_name.replace('_', ' ').title()}</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                     <style>
-                        body {{ font-family: Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }}
-                        h1 {{ color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }}
-                        h2 {{ color: #444; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }}
-                        h3 {{ color: #555; }}
-                        blockquote {{ background-color: #f9f9f9; border-left: 10px solid #ccc; margin: 1.5em 10px; padding: 1em 10px; }}
-                        code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 4px; }}
-                        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                        th {{ background-color: #f2f2f2; }}
+                        :root {{
+                            --primary: #c41e3a;
+                            --secondary: #0a3161;
+                            --text: #333;
+                            --light: #f5f5f5;
+                            --dark: #222;
+                            --accent: #8a8d93;
+                        }}
+                        
+                        * {{
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }}
+                        
+                        body {{ 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            line-height: 1.6;
+                            color: var(--text);
+                            background-color: var(--light);
+                            padding: 0;
+                            margin: 0;
+                        }}
+                        
+                        .container {{
+                            max-width: 1000px;
+                            margin: 0 auto;
+                            padding: 0 20px;
+                        }}
+                        
+                        header {{
+                            background: linear-gradient(135deg, var(--primary), var(--secondary));
+                            color: white;
+                            padding: 40px 0;
+                            text-align: center;
+                            margin-bottom: 40px;
+                            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                        }}
+                        
+                        header h1 {{
+                            font-size: 2.5rem;
+                            margin: 0;
+                            padding: 0;
+                            color: white;
+                            border: none;
+                            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                        }}
+                        
+                        .content {{
+                            background: white;
+                            padding: 40px;
+                            border-radius: 8px;
+                            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                            margin-bottom: 40px;
+                        }}
+                        
+                        h1 {{ color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }}
+                        
+                        h2 {{ 
+                            color: var(--secondary); 
+                            margin-top: 30px; 
+                            margin-bottom: 20px;
+                            padding-bottom: 10px;
+                            border-bottom: 2px solid var(--primary);
+                            font-size: 1.8rem;
+                        }}
+                        
+                        h3 {{ 
+                            color: var(--text); 
+                            margin-top: 25px;
+                            margin-bottom: 15px;
+                            font-size: 1.4rem;
+                        }}
+                        
+                        p {{ margin-bottom: 20px; font-size: 1.1rem; }}
+                        
+                        ul, ol {{ margin-bottom: 20px; padding-left: 20px; }}
+                        
+                        li {{ margin-bottom: 8px; }}
+                        
+                        blockquote {{ 
+                            background-color: #f9f9f9; 
+                            border-left: 4px solid var(--primary); 
+                            margin: 1.5em 0; 
+                            padding: 1em 20px;
+                            font-style: italic;
+                            border-radius: 0 4px 4px 0;
+                        }}
+                        
+                        code {{ 
+                            background-color: #f4f4f4; 
+                            padding: 2px 4px; 
+                            border-radius: 4px; 
+                            font-family: monospace;
+                        }}
+                        
+                        table {{ 
+                            border-collapse: collapse; 
+                            width: 100%; 
+                            margin: 20px 0; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            border-radius: 4px;
+                            overflow: hidden;
+                        }}
+                        
+                        th, td {{ 
+                            padding: 12px 15px; 
+                            text-align: left; 
+                            border-bottom: 1px solid #ddd;
+                        }}
+                        
+                        th {{ 
+                            background-color: var(--secondary); 
+                            color: white;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            font-size: 0.9rem;
+                            letter-spacing: 1px;
+                        }}
+                        
                         tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                        tr:hover {{ background-color: #f1f1f1; }}
+                        
+                        a {{
+                            color: var(--primary);
+                            text-decoration: none;
+                            transition: color 0.3s;
+                        }}
+                        
+                        a:hover {{
+                            color: var(--secondary);
+                            text-decoration: underline;
+                        }}
+                        
+                        .back-link {{
+                            display: inline-block;
+                            margin: 20px 0;
+                            color: var(--primary);
+                            text-decoration: none;
+                            font-weight: bold;
+                        }}
+                        
+                        .back-link:hover {{
+                            text-decoration: underline;
+                        }}
+                        
+                        footer {{
+                            background: var(--dark);
+                            color: white;
+                            padding: 20px 0;
+                            text-align: center;
+                        }}
+                        
+                        @media (max-width: 768px) {{
+                            .content {{
+                                padding: 20px;
+                            }}
+                            
+                            header h1 {{
+                                font-size: 2rem;
+                            }}
+                        }}
                     </style>
                 </head>
                 <body>
-                    {html_content}
-                    <footer>
-                        <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
-                    </footer>
+                    <header>
+                        <div class="container">
+                            <h1>JFK<span style="color: #f3da35;">Reveal</span> - {section_name.replace('_', ' ').title()}</h1>
+                        </div>
+                    </header>
+                    
+                    <div class="container">
+                        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                        
+                        <div class="content">
+                            {html_content}
+                        </div>
+                        
+                        <footer>
+                            <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
+                            <p>JFKReveal - AI Analysis of Declassified Documents</p>
+                        </footer>
+                    </div>
                 </body>
                 </html>""")
         
@@ -617,25 +893,268 @@ class FindingsReport:
             <html>
             <head>
                 <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>JFK Assassination Analysis - Full Report</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                 <style>
-                    body {{ font-family: Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }}
-                    h1 {{ color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }}
-                    h2 {{ color: #444; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }}
-                    h3 {{ color: #555; }}
-                    blockquote {{ background-color: #f9f9f9; border-left: 10px solid #ccc; margin: 1.5em 10px; padding: 1em 10px; }}
-                    code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 4px; }}
-                    table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                    th {{ background-color: #f2f2f2; }}
+                    :root {{
+                        --primary: #c41e3a;
+                        --secondary: #0a3161;
+                        --text: #333;
+                        --light: #f5f5f5;
+                        --dark: #222;
+                        --accent: #8a8d93;
+                    }}
+                    
+                    * {{
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }}
+                    
+                    body {{ 
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: var(--text);
+                        background-color: var(--light);
+                        padding: 0;
+                        margin: 0;
+                    }}
+                    
+                    .container {{
+                        max-width: 1000px;
+                        margin: 0 auto;
+                        padding: 0 20px;
+                    }}
+                    
+                    header {{
+                        background: linear-gradient(135deg, var(--primary), var(--secondary));
+                        color: white;
+                        padding: 40px 0;
+                        text-align: center;
+                        margin-bottom: 40px;
+                        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                    }}
+                    
+                    header h1 {{
+                        font-size: 2.5rem;
+                        margin: 0;
+                        padding: 0;
+                        color: white;
+                        border: none;
+                        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                    }}
+                    
+                    .content {{
+                        background: white;
+                        padding: 40px;
+                        border-radius: 8px;
+                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                        margin-bottom: 40px;
+                    }}
+                    
+                    h1 {{ color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }}
+                    
+                    h2 {{ 
+                        color: var(--secondary); 
+                        margin-top: 30px; 
+                        margin-bottom: 20px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid var(--primary);
+                        font-size: 1.8rem;
+                    }}
+                    
+                    h3 {{ 
+                        color: var(--text); 
+                        margin-top: 25px;
+                        margin-bottom: 15px;
+                        font-size: 1.4rem;
+                    }}
+                    
+                    p {{ margin-bottom: 20px; font-size: 1.1rem; }}
+                    
+                    ul, ol {{ margin-bottom: 20px; padding-left: 20px; }}
+                    
+                    li {{ margin-bottom: 8px; }}
+                    
+                    blockquote {{ 
+                        background-color: #f9f9f9; 
+                        border-left: 4px solid var(--primary); 
+                        margin: 1.5em 0; 
+                        padding: 1em 20px;
+                        font-style: italic;
+                        border-radius: 0 4px 4px 0;
+                    }}
+                    
+                    code {{ 
+                        background-color: #f4f4f4; 
+                        padding: 2px 4px; 
+                        border-radius: 4px; 
+                        font-family: monospace;
+                    }}
+                    
+                    table {{ 
+                        border-collapse: collapse; 
+                        width: 100%; 
+                        margin: 20px 0; 
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        border-radius: 4px;
+                        overflow: hidden;
+                    }}
+                    
+                    th, td {{ 
+                        padding: 12px 15px; 
+                        text-align: left; 
+                        border-bottom: 1px solid #ddd;
+                    }}
+                    
+                    th {{ 
+                        background-color: var(--secondary); 
+                        color: white;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                        font-size: 0.9rem;
+                        letter-spacing: 1px;
+                    }}
+                    
                     tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                    tr:hover {{ background-color: #f1f1f1; }}
+                    
+                    a {{
+                        color: var(--primary);
+                        text-decoration: none;
+                        transition: color 0.3s;
+                    }}
+                    
+                    a:hover {{
+                        color: var(--secondary);
+                        text-decoration: underline;
+                    }}
+                    
+                    .back-link {{
+                        display: inline-block;
+                        margin: 20px 0;
+                        color: var(--primary);
+                        text-decoration: none;
+                        font-weight: bold;
+                    }}
+                    
+                    .back-link:hover {{
+                        text-decoration: underline;
+                    }}
+                    
+                    .section-divider {{
+                        height: 3px;
+                        background: linear-gradient(to right, var(--primary), var(--secondary));
+                        margin: 40px 0;
+                        border-radius: 2px;
+                    }}
+                    
+                    footer {{
+                        background: var(--dark);
+                        color: white;
+                        padding: 20px 0;
+                        text-align: center;
+                    }}
+                    
+                    .toc {{
+                        background: #f5f5f5;
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin-bottom: 30px;
+                    }}
+                    
+                    .toc h3 {{
+                        margin-top: 0;
+                        color: var(--secondary);
+                    }}
+                    
+                    .toc ul {{
+                        list-style-type: none;
+                        padding-left: 0;
+                    }}
+                    
+                    .toc li {{
+                        margin-bottom: 10px;
+                    }}
+                    
+                    .toc a {{
+                        display: block;
+                        padding: 5px 10px;
+                        border-left: 3px solid transparent;
+                        transition: all 0.3s;
+                    }}
+                    
+                    .toc a:hover {{
+                        border-left: 3px solid var(--primary);
+                        background: rgba(0,0,0,0.03);
+                        text-decoration: none;
+                    }}
+                    
+                    @media (max-width: 768px) {{
+                        .content {{
+                            padding: 20px;
+                        }}
+                        
+                        header h1 {{
+                            font-size: 2rem;
+                        }}
+                    }}
                 </style>
             </head>
             <body>
-                {html_content}
-                <footer>
-                    <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
-                </footer>
+                <header>
+                    <div class="container">
+                        <h1>JFK<span style="color: #f3da35;">Reveal</span> - Full Analysis Report</h1>
+                    </div>
+                </header>
+                
+                <div class="container">
+                    <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                    
+                    <div class="content">
+                        <div class="toc">
+                            <h3>Table of Contents</h3>
+                            <ul>
+                                <li><a href="#executive-summary">Executive Summary</a></li>
+                                <li><a href="#detailed-findings">Detailed Findings</a></li>
+                                <li><a href="#suspects-analysis">Suspects Analysis</a></li>
+                                <li><a href="#coverup-analysis">Coverup Analysis</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div id="executive-summary">
+                            <h2>Executive Summary</h2>
+                            {html_content.replace('<h1>JFK Assassination Analysis - Full Report</h1>', '').split('<hr />', 1)[0]}
+                        </div>
+                        
+                        <div class="section-divider"></div>
+                        
+                        <div id="detailed-findings">
+                            <h2>Detailed Findings</h2>
+                            {html_content.split('<hr />', 2)[1].split('<hr />', 1)[0]}
+                        </div>
+                        
+                        <div class="section-divider"></div>
+                        
+                        <div id="suspects-analysis">
+                            <h2>Suspects Analysis</h2>
+                            {html_content.split('<hr />', 3)[2].split('<hr />', 1)[0]}
+                        </div>
+                        
+                        <div class="section-divider"></div>
+                        
+                        <div id="coverup-analysis">
+                            <h2>Coverup Analysis</h2>
+                            {html_content.split('<hr />', 4)[3].split('<hr />', 1)[0]}
+                        </div>
+                    </div>
+                    
+                    <footer>
+                        <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
+                        <p>JFKReveal - AI Analysis of Declassified Documents</p>
+                    </footer>
+                </div>
             </body>
             </html>""")
         

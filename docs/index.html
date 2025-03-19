@@ -3,44 +3,367 @@ layout: default
 title: JFKReveal - JFK Assassination Document Analysis
 ---
 
-<h1>JFKReveal - JFK Assassination Document Analysis</h1>
-
-<h2>Overview</h2>
-
-<p>JFKReveal is a tool that analyzes declassified documents from the National Archives to uncover evidence about the JFK assassination using advanced AI techniques and Retrieval Augmented Generation (RAG).</p>
-
-<h2>Analysis Reports</h2>
-
-<p>The following reports are available:</p>
-
-<ul>
-  <li><a href="reports/executive_summary.html">Executive Summary</a> - High-level overview of key findings</li>
-  <li><a href="reports/detailed_findings.html">Detailed Findings</a> - In-depth examination of all evidence</li>
-  <li><a href="reports/suspects_analysis.html">Suspects Analysis</a> - Evaluation of potential culprits</li>
-  <li><a href="reports/coverup_analysis.html">Coverup Analysis</a> - Assessment of potential government involvement</li>
-  <li><a href="reports/full_report.html">Full Report</a> - Complete analysis with all sections</li>
-</ul>
-
-<h2>Data Sources</h2>
-
-<p>The analysis is based on more than 1,100 declassified documents from the National Archives JFK Collection. The documents were processed using AI to extract information, identify patterns, and generate insights.</p>
-
-<h2>Methodology</h2>
-
-<p>Our analysis pipeline includes:</p>
-
-<ol>
-  <li>Document collection from National Archives</li>
-  <li>Text extraction with page references</li>
-  <li>Semantic search using vector embeddings</li>
-  <li>AI analysis with OpenAI models</li>
-  <li>Comprehensive report generation</li>
-</ol>
-
-<h2>Repository</h2>
-
-<p>The full source code and data are available in the <a href="https://github.com/PimpMyNines/JFKReveal">GitHub repository</a>.</p>
-
-<h2>Disclaimer</h2>
-
-<p>This tool is designed for educational and research purposes only. The analysis presents evidence-based conclusions but should not be considered definitive. All findings should be critically evaluated alongside other historical research.</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JFKReveal - JFK Assassination Document Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #c41e3a;
+            --secondary: #0a3161;
+            --text: #333;
+            --light: #f5f5f5;
+            --dark: #222;
+            --accent: #8a8d93;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--light);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 60px 0;
+        }
+        
+        h2 {
+            font-size: 2.2rem;
+            margin-bottom: 30px;
+            color: var(--secondary);
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 60px;
+            height: 4px;
+            background-color: var(--primary);
+        }
+        
+        p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .section {
+            margin-bottom: 60px;
+        }
+        
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .report-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .report-card-header {
+            background: var(--secondary);
+            color: white;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .report-card-body {
+            padding: 20px;
+        }
+        
+        .report-card-description {
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+        
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background: #a00f29;
+        }
+        
+        .pipeline {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pipeline-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .pipeline-step {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            padding: 0 10px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .pipeline-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -10px;
+            top: 40px;
+            font-size: 2rem;
+            color: var(--accent);
+        }
+        
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            color: var(--primary);
+            font-size: 2rem;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+        }
+        
+        .footer-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            color: white;
+            margin: 0 10px;
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+        
+        .social-links a:hover {
+            color: var(--primary);
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .pipeline-step:not(:last-child)::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>JFK<span style="color: #f3da35;">Reveal</span></h1>
+                <div class="subtitle">Uncovering the Truth with Advanced AI Analysis</div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="main-content">
+        <div class="container">
+            <section class="section">
+                <h2>Project Overview</h2>
+                <p>JFKReveal is a cutting-edge tool that analyzes declassified documents from the National Archives to uncover evidence about the JFK assassination using advanced AI techniques and Retrieval Augmented Generation (RAG). By processing thousands of documents and applying deep analytical methods, we aim to bring clarity to one of history's most controversial events.</p>
+            </section>
+            
+            <section class="section">
+                <h2>Analysis Reports</h2>
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <div class="report-card-header">Executive Summary</div>
+                        <div class="report-card-body">
+                            <p class="report-card-description">High-level overview of key findings from our comprehensive analysis.</p>
+                            <a href="reports/executive_summary.html" class="btn">Read Report</a>
+                        </div>
+                    </div>
+                    
+                    <div class="report-card">
+                        <div class="report-card-header">Detailed Findings</div>
+                        <div class="report-card-body">
+                            <p class="report-card-description">In-depth examination of all evidence with comprehensive analysis.</p>
+                            <a href="reports/detailed_findings.html" class="btn">Read Report</a>
+                        </div>
+                    </div>
+                    
+                    <div class="report-card">
+                        <div class="report-card-header">Suspects Analysis</div>
+                        <div class="report-card-body">
+                            <p class="report-card-description">Thorough evaluation of all potential culprits and their connections.</p>
+                            <a href="reports/suspects_analysis.html" class="btn">Read Report</a>
+                        </div>
+                    </div>
+                    
+                    <div class="report-card">
+                        <div class="report-card-header">Coverup Analysis</div>
+                        <div class="report-card-body">
+                            <p class="report-card-description">Detailed assessment of potential government involvement and information suppression.</p>
+                            <a href="reports/coverup_analysis.html" class="btn">Read Report</a>
+                        </div>
+                    </div>
+                    
+                    <div class="report-card">
+                        <div class="report-card-header">Full Report</div>
+                        <div class="report-card-body">
+                            <p class="report-card-description">Complete analysis with all sections combined for comprehensive review.</p>
+                            <a href="reports/full_report.html" class="btn">Read Report</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="section">
+                <h2>Our Methodology</h2>
+                <div class="pipeline">
+                    <p>JFKReveal employs a sophisticated pipeline to process and analyze thousands of declassified documents:</p>
+                    <div class="pipeline-steps">
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div class="step-title">Document Collection</div>
+                            <p>Gathering documents from the National Archives</p>
+                        </div>
+                        
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="step-title">Text Extraction</div>
+                            <p>Converting documents to searchable text with page references</p>
+                        </div>
+                        
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="step-title">Semantic Search</div>
+                            <p>Creating vector embeddings for intelligent search</p>
+                        </div>
+                        
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div class="step-title">AI Analysis</div>
+                            <p>Applying advanced models to analyze content</p>
+                        </div>
+                        
+                        <div class="pipeline-step">
+                            <div class="step-icon">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div class="step-title">Report Generation</div>
+                            <p>Compiling findings into comprehensive reports</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <p>JFKReveal is an open-source project dedicated to historical transparency</p>
+                <div class="social-links">
+                    <a href="https://github.com/PimpMyNines/JFKReveal" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+                <p>© 2025 JFKReveal Project</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

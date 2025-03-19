@@ -14,6 +14,43 @@
 - `make run`: Run the full pipeline
 - `make run SKIP_SCRAPING=1 SKIP_PROCESSING=1`: Run only the analysis part of the pipeline
 
+## Publishing GitHub Pages Updates
+To publish updates to the GitHub Pages site, follow these steps:
+
+1. Create a new feature branch:
+   ```bash
+   git checkout -b feature/ui-improvements
+   ```
+
+2. Commit your changes:
+   ```bash
+   git add docs/ src/
+   git commit -m "Update UI with modern design and improve detective-style analysis"
+   ```
+
+3. Push the branch to the remote repository:
+   ```bash
+   git push -u origin feature/ui-improvements
+   ```
+
+4. Create a pull request to merge into main:
+   ```bash
+   gh pr create --title "Modern UI and Detective-style Analysis Improvements" --body "
+   ## Summary
+   - Added modern, responsive UI with card-based design for GitHub Pages
+   - Updated analysis prompts with detective-style investigation approach
+   - Improved typography and readability of all report pages
+   - Added visual pipeline diagram and better navigation
+
+   ## Test plan
+   - Verify all report pages render correctly in both desktop and mobile browsers
+   - Check that all links between pages work properly
+   - Ensure the table of contents in the full report functions correctly
+   "
+   ```
+
+5. Once the PR is approved and merged, the GitHub Pages site will automatically update.
+
 ## Code Refactoring Summary
 
 ### What Works
@@ -58,6 +95,20 @@
    - Create mock responses for testing to avoid hitting real APIs
    - Test failure modes (timeouts, rate limits) as well as success paths
 
+6. **UI Design Best Practices**:
+   - Use CSS variables for consistent color schemes and easy theme changes
+   - Implement responsive design with media queries for mobile compatibility
+   - Create card-based layouts for better organization of related content
+   - Use visual hierarchy with clear headings, spacing, and typography
+   - Include navigation aids like table of contents and back buttons
+
+7. **LLM Prompt Engineering**:
+   - Frame prompts with specific roles (e.g., detective) to get appropriately styled responses
+   - Include detailed output structure requirements in the prompt
+   - Break complex analysis into logical sections with clear expectations
+   - Provide specific format instructions (Markdown with headers, etc.)
+   - Include fallback mechanisms when structured output fails
+
 ## Architecture Notes
 
 The project follows a pipeline architecture:
@@ -79,19 +130,31 @@ The project is configured with GitHub Pages to showcase the analysis reports:
    - Main site is available at https://pimpmynines.github.io/JFKReveal/
 
 2. **Content Organization**:
-   - `docs/index.html`: Main landing page
+   - `docs/index.html`: Main landing page with modern card-based UI
    - `docs/reports/`: Contains all analysis HTML reports
    - `docs/data/`: Contains analysis data in JSON format
    - `docs/_config.yml`: Jekyll configuration file
 
 3. **Theme Configuration**:
    - Using the `minimal` theme for GitHub Pages
-   - Custom styling can be added through the theme's layout options
+   - Custom CSS and modern design implemented directly in HTML files
+   - American-themed color scheme (red, white, blue) with CSS variables
+   - Responsive design for desktop and mobile viewing
 
-4. **Updating the GitHub Pages Site**:
+4. **UI Components**:
+   - Card-based navigation for report access
+   - Visual pipeline diagram with icons
+   - Table of contents for full report
+   - Back navigation links
+   - Section dividers for content organization
+   - Consistent styling across all pages
+
+5. **Updating the GitHub Pages Site**:
    - Add new reports to the `docs/reports/` directory
-   - Commit and push changes to the `main` branch
-   - GitHub Pages will automatically rebuild and deploy the site
+   - Make UI changes by editing the HTML/CSS in the report templates
+   - Commit and push changes to a feature branch
+   - Create a pull request to merge into `main`
+   - GitHub Pages will automatically rebuild and deploy the site when merged
 
 ## Repository Configuration
 
