@@ -33,7 +33,7 @@ jobs:
     
     - name: Test with pytest
       run: |
-        pytest tests/
+        python -m pytest
       env:
         # Use a dummy key for testing
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-key-for-testing' }}
