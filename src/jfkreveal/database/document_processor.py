@@ -15,6 +15,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
 from .text_cleaner import clean_pdf_text, clean_document_chunks
+from ..utils.parallel_processor import process_documents_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -249,9 +250,9 @@ class DocumentProcessor:
         Process all PDF documents in the input directory in parallel.
         
         Returns:
-            List of paths to all processed chunk files
+            List of paths to processed files
         """
-        # Find all PDF files
+        # List all PDF files in input directory
         pdf_files = []
         for root, _, files in os.walk(self.input_dir):
             for file in files:
@@ -260,42 +261,18 @@ class DocumentProcessor:
                     
         logger.info(f"Found {len(pdf_files)} PDF files to process")
         
-        # If skip_existing is True, filter out already processed files
-        if self.skip_existing:
-            unprocessed_files = []
-            for pdf_path in pdf_files:
-                filename = os.path.basename(pdf_path)
-                output_path = os.path.join(
-                    self.output_dir, 
-                    f"{os.path.splitext(filename)[0]}.json"
-                )
-                if not os.path.exists(output_path):
-                    unprocessed_files.append(pdf_path)
-            
-            logger.info(f"Found {len(unprocessed_files)} new PDF files to process (skipping {len(pdf_files) - len(unprocessed_files)} already processed)")
-            pdf_files = unprocessed_files
+        # Use parallel processing for better performance
+        results = process_documents_parallel(
+            document_paths=pdf_files,
+            processing_function=self.process_document,
+            max_workers=self.max_workers
+        )
         
-        processed_files = []
-        
-        # Process documents in parallel using ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Create future objects for each PDF file
-            future_to_pdf = {
-                executor.submit(self.process_document, pdf_path): pdf_path
-                for pdf_path in pdf_files
-            }
+        # Filter out None results from failed processing
+        processed_files = [path for path in results if path is not None]
             
-            # Process results as they complete
-            for future in tqdm(concurrent.futures.as_completed(future_to_pdf), total=len(pdf_files), desc="Processing PDFs"):
-                pdf_path = future_to_pdf[future]
-                try:
-                    output_path = future.result()
-                    if output_path:
-                        processed_files.append(output_path)
-                except Exception as e:
-                    logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
-                
-        logger.info(f"Processed {len(processed_files)} documents")
+        logger.info(f"Successfully processed {len(processed_files)}/{len(pdf_files)} files")
+        
         return processed_files
         
     def get_processed_documents(self) -> List[str]:
