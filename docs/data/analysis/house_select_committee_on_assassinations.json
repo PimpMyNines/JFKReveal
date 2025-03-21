@@ -1,0 +1,33 @@
+{
+  "topic": "House Select Committee on Assassinations",
+  "summary": {
+    "key_findings": [
+      "The House Select Committee on Assassinations (HSCA) concluded that President John F. Kennedy was likely assassinated as a result of a conspiracy.",
+      "The HSCA found that the original FBI and Warren Commission investigations were flawed and did not adequately explore the possibility of conspiracy.",
+      "Acoustic evidence suggested the presence of a second gunman, although this evidence was later disputed."
+    ],
+    "consistent_information": [
+      "Multiple documents confirm that the HSCA criticized the Warren Commission's findings and methodology.",
+      "There is consistent mention of the HSCA's reliance on acoustic evidence to suggest a second shooter."
+    ],
+    "contradictions": [
+      "Some documents dispute the validity of the acoustic evidence, citing later scientific reviews that discredited it.",
+      "There are inconsistencies in witness testimonies regarding the number of shots fired and their origins."
+    ],
+    "potential_evidence": [
+      "The HSCA's findings of a probable conspiracy and the criticism of the Warren Commission suggest potential suppression of information or inadequate investigation."
+    ],
+    "missing_information": [
+      "There is a lack of conclusive evidence identifying additional conspirators or their motives.",
+      "Details on the extent of CIA and FBI involvement or knowledge remain unclear."
+    ],
+    "assassination_theories": [
+      "The HSCA's findings have been linked to theories involving organized crime, anti-Castro Cuban groups, and potential CIA involvement."
+    ],
+    "credibility": "medium",
+    "document_references": {}
+  },
+  "document_analyses": [],
+  "num_documents": 0,
+  "error": null
+}

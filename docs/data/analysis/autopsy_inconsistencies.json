@@ -1,0 +1,35 @@
+{
+  "topic": "Autopsy inconsistencies",
+  "summary": {
+    "key_findings": [
+      "Multiple documents highlight discrepancies in the autopsy report regarding the number and location of bullet wounds.",
+      "There are inconsistencies in the descriptions of the head wound, with some documents suggesting a larger exit wound than officially reported.",
+      "Several documents question the chain of custody and handling of autopsy photographs and X-rays."
+    ],
+    "consistent_information": [
+      "The autopsy was conducted under significant pressure and time constraints, as noted in several documents.",
+      "There is a recurring mention of discrepancies between the autopsy report and eyewitness accounts of the wounds."
+    ],
+    "contradictions": [
+      "Some documents describe a bullet entry wound in the front of the neck, while others only mention wounds from the rear.",
+      "The official autopsy report states a single bullet caused multiple wounds, but other documents suggest multiple shooters based on wound analysis."
+    ],
+    "potential_evidence": [
+      "Documents indicate possible tampering or misplacement of autopsy materials, such as photographs and X-rays, which could suggest a coverup.",
+      "There are references to high-level officials influencing the autopsy process, potentially altering findings."
+    ],
+    "missing_information": [
+      "Detailed records of the autopsy procedure, including notes and photographs, are incomplete or missing in several document references.",
+      "There is a lack of clarity on who had access to the autopsy materials immediately after the procedure."
+    ],
+    "assassination_theories": [
+      "The discrepancies in the autopsy report are often cited in support of the 'multiple shooters' theory.",
+      "Some documents align with the theory that the assassination was a result of a conspiracy involving government officials."
+    ],
+    "credibility": "medium",
+    "document_references": {}
+  },
+  "document_analyses": [],
+  "num_documents": 0,
+  "error": null
+}

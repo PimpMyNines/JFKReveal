@@ -8,6 +8,7 @@ JFKReveal is a powerful tool that analyzes over 1,100 declassified documents fro
 
 - **Automated Document Collection**: Scrapes 1,123 PDF documents from the National Archives JFK Release 2025 collection.
 - **Advanced Text Extraction**: Processes PDFs to extract text with page references and metadata.
+- **Intelligent OCR Text Cleaning**: Automatically cleans and normalizes text from scanned documents.
 - **Semantic Search**: Creates vector embeddings for efficient document searching and retrieval.
 - **AI-Powered Analysis**: Leverages OpenAI models to analyze document content for key information.
 - **Comprehensive Reports**: Generates detailed reports on findings, suspects, and potential coverups.
@@ -51,9 +52,10 @@ make run
 This will:
 1. Download all PDF documents from the National Archives
 2. Process the documents and extract text
-3. Create a vector database for efficient searching
-4. Analyze the documents using AI
-5. Generate comprehensive reports
+3. Clean the OCR text to improve quality
+4. Create a vector database for efficient searching
+5. Analyze the documents using AI
+6. Generate comprehensive reports
 
 The final report will be available at `data/reports/full_report.html`.
 
@@ -67,6 +69,9 @@ make run SKIP_SCRAPING=1
 
 # Skip document processing (if PDFs are already processed)
 make run SKIP_PROCESSING=1
+
+# Disable text cleaning (if you want to use raw OCR text)
+make run NO_CLEAN_TEXT=1
 ```
 
 ## 📊 Understanding the Results
@@ -86,20 +91,25 @@ JFKReveal follows a sophisticated pipeline:
 
 1. **Document Collection**: Scrapes PDF documents from the National Archives website
 2. **Text Extraction**: Processes PDFs to extract text with page numbers and metadata
-3. **Chunking & Vectorization**: Splits documents into manageable chunks and creates vector embeddings
-4. **Topic Analysis**: Analyzes documents for specific topics, individuals, and events
-5. **Report Generation**: Synthesizes findings into comprehensive reports
+3. **OCR Text Cleaning**: Cleans and normalizes text from scanned documents
+4. **Chunking & Vectorization**: Splits documents into manageable chunks and creates vector embeddings
+5. **Topic Analysis**: Analyzes documents for specific topics, individuals, and events
+6. **Report Generation**: Synthesizes findings into comprehensive reports
 
-The system uses OpenAI embeddings for vectorization and GPT-4o for analysis, ensuring high-quality results.
+The system supports both Ollama (local) and OpenAI embeddings for vectorization, and uses GPT-4o for analysis.
 
 ## 🛠️ Configuration
 
 Key configuration options:
 
 - **OpenAI API Key**: Set in the `.env` file (copy from `.env.example`)
-- **Embedding Model**: Configure in `.env` file (defaults to `text-embedding-3-large` for local development)
+- **Embedding Provider**: Set in `.env` file (`ollama` or `openai`, defaults to `ollama`)
+- **Ollama Embedding Model**: Configure in `.env` file (defaults to `nomic-embed-text`)
+- **Ollama Base URL**: Configure in `.env` file (defaults to `http://localhost:11434`)
+- **OpenAI Embedding Model**: Configure in `.env` file (used when provider is set to `openai`)
 - **Analysis Model**: Configure in `.env` file (defaults to `gpt-4.5-preview`)
 - **Chunking Parameters**: Adjust chunk size and overlap in `document_processor.py`
+- **Text Cleaning**: Configure cleaning options in `text_cleaner.py`
 - **Analysis Topics**: Modify topics list in `document_analyzer.py`
 
 ## 📚 Documentation

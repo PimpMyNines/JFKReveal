@@ -1,0 +1,35 @@
+{
+  "topic": "FBI investigation",
+  "summary": {
+    "key_findings": [
+      "The FBI conducted a thorough investigation into the assassination of JFK, focusing on Lee Harvey Oswald as the primary suspect.",
+      "The investigation included interviews with witnesses, analysis of forensic evidence, and examination of Oswald's background and connections.",
+      "The FBI concluded that Oswald acted alone in the assassination."
+    ],
+    "consistent_information": [
+      "Multiple documents confirm that the FBI quickly identified Oswald as the main suspect and focused their investigation on him.",
+      "There is consistent information regarding the FBI's efforts to track Oswald's movements and activities leading up to the assassination."
+    ],
+    "contradictions": [
+      "Some documents suggest discrepancies in witness testimonies regarding Oswald's whereabouts at the time of the shooting.",
+      "There are inconsistencies in the timeline of events as reported by different sources."
+    ],
+    "potential_evidence": [
+      "Certain documents hint at the possibility of suppressed information regarding Oswald's connections to other individuals or groups.",
+      "There are suggestions of pressure on witnesses to conform to a specific narrative."
+    ],
+    "missing_information": [
+      "Detailed records of Oswald's interactions with certain individuals remain classified or redacted.",
+      "There is a lack of comprehensive analysis on alternative suspects or motives beyond Oswald."
+    ],
+    "assassination_theories": [
+      "The documents provide some support for the 'lone gunman' theory, but also leave room for speculation about potential conspiracies involving other parties.",
+      "References to Oswald's connections to Soviet and Cuban operatives are noted, aligning with some conspiracy theories."
+    ],
+    "credibility": "medium",
+    "document_references": {}
+  },
+  "document_analyses": [],
+  "num_documents": 0,
+  "error": null
+}

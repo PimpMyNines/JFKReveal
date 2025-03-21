@@ -10,49 +10,74 @@ from tqdm import tqdm
 import numpy as np
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_core.exceptions import LangChainException
 from langchain_core.embeddings import FakeEmbeddings
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-# Using OpenAI embeddings only
+# Using Ollama embeddings with OpenAI as fallback
 
 logger = logging.getLogger(__name__)
 
 class VectorStore:
-    """Vector store for document chunks using ChromaDB and OpenAI embeddings."""
+    """Vector store for document chunks using ChromaDB and embeddings (Ollama or OpenAI)."""
     
     def __init__(
         self,
         persist_directory: str = "data/vectordb",
         embedding_model: Optional[str] = None,
+        embedding_provider: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        ollama_base_url: Optional[str] = None,
     ):
         """
         Initialize the vector store.
         
         Args:
             persist_directory: Directory to persist the vector database
-            embedding_model: OpenAI embedding model to use
+            embedding_model: Name of the embedding model to use
+            embedding_provider: Provider to use for embeddings ('ollama' or 'openai')
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            ollama_base_url: Base URL for Ollama API (defaults to http://localhost:11434)
         """
         self.persist_directory = persist_directory
         
-        # Get embedding model from parameter, env var, or use default
-        if embedding_model is None:
-            embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+        # Get embedding provider from parameter or env var (defaults to 'ollama')
+        if embedding_provider is None:
+            embedding_provider = os.environ.get("EMBEDDING_PROVIDER", "ollama")
         
-        # Use OpenAI embeddings with the specified model
+        # Get embedding model or use default based on provider
+        if embedding_model is None:
+            if embedding_provider == "ollama":
+                embedding_model = os.environ.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+            else:
+                embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+        
+        # Get Ollama base URL
+        if ollama_base_url is None:
+            ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        
+        # Try to initialize embeddings based on provider
         try:
-            self.embedding_function = OpenAIEmbeddings(
-                model=embedding_model,
-                openai_api_key=openai_api_key
-            )
-            logger.info(f"Successfully initialized OpenAI embeddings with model: {embedding_model}")
+            if embedding_provider.lower() == "ollama":
+                logger.info(f"Initializing Ollama embeddings with model: {embedding_model}")
+                self.embedding_function = OllamaEmbeddings(
+                    model=embedding_model,
+                    base_url=ollama_base_url
+                )
+                logger.info(f"Successfully initialized Ollama embeddings with model: {embedding_model}")
+            else:
+                logger.info(f"Initializing OpenAI embeddings with model: {embedding_model}")
+                self.embedding_function = OpenAIEmbeddings(
+                    model=embedding_model,
+                    openai_api_key=openai_api_key
+                )
+                logger.info(f"Successfully initialized OpenAI embeddings with model: {embedding_model}")
         except Exception as e:
-            logger.error(f"Error initializing OpenAI embeddings: {e}")
+            logger.error(f"Error initializing embeddings with {embedding_provider}: {e}")
             logger.warning("Falling back to FakeEmbeddings for testing purposes")
-            self.embedding_function = FakeEmbeddings(size=1536)  # Dimension for OpenAI embeddings
+            self.embedding_function = FakeEmbeddings(size=1536)  # Default dimension
             logger.info("Successfully initialized FakeEmbeddings")
         
         # Create or load vector store
@@ -97,8 +122,9 @@ class VectorStore:
                 ids=ids
             )
             
-            # Note: persist() method may not be needed with newer versions of Chroma
-            # Changes are automatically persisted
+            # Explicitly persist changes after adding documents
+            logger.debug(f"Persisting changes to vector store at {self.persist_directory}")
+            self.vector_store.persist()
             
             return len(texts)
             
