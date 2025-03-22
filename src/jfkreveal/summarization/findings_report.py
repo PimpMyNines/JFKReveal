@@ -72,7 +72,7 @@ class FindingsReport:
         analysis_dir: str = "data/analysis",
         output_dir: str = "data/reports",
         raw_docs_dir: str = "data/raw",
-        model_name: str = "gpt-4o",
+        model_name: str = "gpt-4o",  # Using gpt-4o instead of gpt-4.5-preview/gpt-3.5-turbo
         openai_api_key: Optional[str] = None,
         temperature: float = 0.1,
         max_retries: int = 5,
@@ -112,6 +112,28 @@ class FindingsReport:
         
         # Build document ID to PDF URL mapping
         self.document_urls = self._build_document_urls()
+    
+    def _save_report_file(self, content: str, filename: str) -> str:
+        """
+        Save report content to a file in the output directory.
+        
+        Args:
+            content: Content to save
+            filename: Filename to save to
+            
+        Returns:
+            Path to the saved file
+        """
+        file_path = os.path.join(self.output_dir, filename)
+        
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            logger.info(f"Saved report to {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"Error saving report to {file_path}: {e}")
+            raise
     
     def _build_document_urls(self) -> Dict[str, str]:
         """
@@ -249,65 +271,57 @@ You must adhere to these non-negotiable guidelines:
                 • Most likely scenario based on all available evidence
                 • Unresolved questions that demand further investigation
             
-            IMPORTANT: When referencing specific documents, include PDF links if available. For example, if a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" or with a footnote linking to the PDF.
-            
-            FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, bullet points, and emphasis.
-            Include specific document references for key claims where possible with PDF links when available.
-            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
-            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
-            Ensure the language is professional, highly detailed, and structured for clarity.
-            
-            Before finalizing your report, you MUST perform a self-audit:
-            1. Identify any unverified claims and mark them as such
-            2. Correct any inconsistencies and contradictions 
-            3. Highlight areas requiring further evidence
-            4. Verify that every claim has proper source attribution
-            5. Confirm you've distinguished clearly between facts and speculation
-            """)
+            Be extremely careful to only include information that is directly supported by the document analyses."""),
         ])
         
         try:
-            # First try to get structured output
-            chain = prompt_template | self.llm.with_structured_output(
+            # Generate summary using structured output
+            llm_with_structured_output = self.llm.with_structured_output(
                 ExecutiveSummaryResponse,
                 method="function_calling"
             )
             
-            # Run the chain
-            response = chain.invoke({
-                "analyses_summary": json.dumps(analyses_summary, indent=2)
-            })
+            # Format prompt with analyses summary
+            prompt = prompt_template.format(
+                analyses_summary=analyses_summary
+            )
             
-            # Convert structured output to markdown
+            # Generate structured response
+            response = llm_with_structured_output.invoke(prompt)
+            
+            # Convert to markdown format
             sections = [
-                f"# Executive Summary: JFK Assassination Document Analysis\n\n## Overview\n\n{response.overview}\n",
+                "# Executive Summary\n\n## Overview\n\n" + response.overview,
                 "## Significant Evidence\n\n" + "\n".join([f"- {item}" for item in response.significant_evidence]),
                 "## Potential Government Involvement\n\n" + "\n".join([f"- {item}" for item in response.potential_government_involvement]),
-                "## Most Credible Theories\n\n" + "\n".join([f"- {item}" for item in response.credible_theories]),
+                "## Credible Theories\n\n" + "\n".join([f"- {item}" for item in response.credible_theories]),
                 "## Likely Culprits\n\n" + "\n".join([f"- {item}" for item in response.likely_culprits]),
                 "## Alternative Suspects\n\n" + "\n".join([f"- {item}" for item in response.alternative_suspects]),
-                "## Patterns of Redaction\n\n" + "\n".join([f"- {item}" for item in response.redaction_patterns]),
-                f"## Document Credibility Assessment\n\n{response.document_credibility}"
+                "## Redaction Patterns\n\n" + "\n".join([f"- {item}" for item in response.redaction_patterns]),
+                f"## Document Credibility\n\n{response.document_credibility}"
             ]
             
-            executive_summary = "\n\n".join(sections)
-            return executive_summary
-        
+            content = "\n\n".join(sections)
+            
+            # Save executive summary to file
+            self._save_report_file(content, "executive_summary.md")
+            
+            return content
         except Exception as e:
-            logger.warning(f"Error generating structured executive summary: {e}. Falling back to text generation.")
+            logger.error(f"Error generating executive summary: {e}")
+            logger.warning("Falling back to unstructured text generation")
             
             # Fall back to unstructured text generation
-            unstructured_chain = prompt_template | self.llm
+            prompt = prompt_template.format(
+                analyses_summary=analyses_summary
+            )
+            response = self.llm.invoke(prompt)
+            content = response.content
             
-            # Run the chain with unstructured output
-            response = unstructured_chain.invoke({
-                "analyses_summary": json.dumps(analyses_summary, indent=2)
-            })
+            # Save executive summary to file
+            self._save_report_file(content, "executive_summary.md")
             
-            # Extract content from the AIMessage
-            if hasattr(response, "content"):
-                return response.content
-            return str(response)
+            return content
     
     @retry(
         stop=stop_after_attempt(5),
@@ -316,7 +330,7 @@ You must adhere to these non-negotiable guidelines:
     )
     def generate_detailed_findings(self, analyses: List[Dict[str, Any]]) -> str:
         """
-        Generate detailed findings report using LangChain.
+        Generate detailed findings report from analyses.
         
         Args:
             analyses: List of analysis data
@@ -324,6 +338,27 @@ You must adhere to these non-negotiable guidelines:
         Returns:
             Detailed findings markdown text
         """
+        # Prepare analysis data for prompt
+        analysis_summaries = []
+        for analysis in analyses:
+            # Extract key information
+            topic = analysis.get("topic", "Unknown")
+            documents = analysis.get("documents", [])
+            entities = analysis.get("entities", [])
+            key_findings = analysis.get("summary", {}).get("key_findings", [])
+            potential_evidence = analysis.get("summary", {}).get("potential_evidence", [])
+            
+            # Create summary with essential details
+            summary = {
+                "topic": topic,
+                "num_documents": len(documents),
+                "document_examples": [d.get("title", "Untitled") for d in documents[:3]],
+                "key_entities": [e.get("name", "Unknown") for e in entities[:5]],
+                "key_findings": key_findings,
+                "potential_evidence": potential_evidence
+            }
+            analysis_summaries.append(summary)
+        
         # Create prompt template
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are an elite detective with unmatched analytical and investigative skills, specializing in deep forensic analysis, historical investigations, and intelligence gathering. You have been granted access to a vast archive containing thousands of declassified and classified documents, including PDFs, reports, eyewitness testimonies, CIA and FBI records, government memos, and autopsy results related to the assassination of John F. Kennedy.
@@ -340,77 +375,135 @@ You must adhere to these non-negotiable guidelines:
 
 4. Self-Audit Requirement: Before completing your report, you must perform a self-audit to identify any unverified claims, correct inconsistencies, and highlight areas requiring further evidence. This ensures your report maintains the highest standards of factual accuracy."""),
             ("human", """
-            Based on the following analyses of declassified JFK documents, create a comprehensive detailed findings report.
+            Based on the following analyses of JFK declassified documents, create detailed findings report that thoroughly examines all aspects of the assassination.
             
-            ANALYSES:
-            {analyses}
+            ANALYSES SUMMARIES:
+            {analysis_summaries}
             
-            Your detailed report should include:
+            Your detailed findings report should include:
             
-            1. Historical Context & Key Figures
-                • Overview of JFK's presidency and political climate
-                • Key individuals involved (Lee Harvey Oswald, Jack Ruby, government officials, intelligence agencies, etc.)
-            
-            2. Chronological Timeline
-                • Present a detailed chronological timeline of events based on the documents
-                • Highlight critical moments before, during, and after the assassination
-            
-            3. Analysis of Declassified Documents
+            1. Topic Analysis
                 • In-depth examination of each key topic
-                • Summary of crucial documents and their significance
-                • Identification of redactions, inconsistencies, or contradictions in official records
+                • Relationships between topics and crosscutting themes
             
-            4. Key Individuals and Agencies
-                • Detail the roles and actions of key individuals and agencies
-                • Behavioral analysis of key individuals before, during, and after the assassination
+            2. Timeline of Events
+                • Chronological timeline of events based on the documents
+                • Key dates and activities prior to and following the assassination
             
-            5. Forensic Analysis
-                • Breakdown of bullet trajectories, wounds, and impact reports if available
-                • Analysis of the 'single bullet theory' vs. alternative explanations
-                • Possible inconsistencies in forensic evidence
+            3. Key Individuals & Agencies
+                • Roles and actions of key individuals
+                • Government agencies involved and their actions
             
-            6. Evidentiary Assessment
-                • Examine inconsistencies and contradictions in official accounts
-                • Identify patterns of information withholding or redaction
-                • Evaluate the credibility of different pieces of evidence
+            4. Assassination Theories Analysis
+                • Evaluation of evidence for various theories
+                • Strength of evidence for each theory
             
-            7. Theories and Scenarios
-                • Analyze the evidence for various assassination theories
-                • Draw reasoned conclusions about the most likely scenarios
-                • Evaluate official Warren Commission conclusions and their flaws
+            5. Official Account Assessment
+                • Inconsistencies and contradictions in official accounts
+                • Patterns of information withholding or redaction
             
-            8. Suspects Evaluation
-                • Identify the most likely culprit(s) with supporting evidence
-                • Present alternative suspects with detailed analysis of their potential involvement
-                • Assess possible collaborations between suspects
+            6. Evidence Evaluation
+                • Credibility of different pieces of evidence
+                • Missing evidence or information gaps
             
-            IMPORTANT: When referencing specific documents, ALWAYS include PDF links when available. For example, if a document has a "pdf_url" field, format your reference like: "[Document ID](pdf_url)" to create a clickable link to the original document.
+            7. Most Likely Scenario
+                • Reasoned conclusions about the most likely scenarios
+                • Primary and alternative suspects with supporting evidence
             
-            FORMAT YOUR RESPONSE AS MARKDOWN with appropriate headings, subheadings, bullet points, and emphasis.
-            Include specific document references (document_id) for all key claims WITH PDF LINKS when available.
-            Use a fact-driven, objective, and analytical approach with a forensic, intelligence-driven methodology.
-            Critically assess every piece of evidence, cross-referencing sources for validity and exposing any inconsistencies.
-            Highlight key findings, provide evidence-backed reasoning, and avoid speculative conclusions unless grounded in substantial proof.
-            """)
+            Be extremely careful to only include information that is directly supported by the document analyses. Always cite the specific documents when making claims."""),
         ])
         
         try:
-            # Run the chain with unstructured output (DetailedFindingsResponse is too complex for reliable function calling)
-            chain = prompt_template | self.llm
+            # Generate detailed findings using structured output
+            llm_with_structured_output = self.llm.with_structured_output(
+                DetailedFindingsResponse,
+                method="function_calling"
+            )
             
-            # Run the chain with unstructured output
-            response = chain.invoke({
-                "analyses": json.dumps(analyses, indent=2)
-            })
+            # Format prompt with analysis summaries
+            prompt = prompt_template.format(
+                analysis_summaries=analysis_summaries
+            )
             
-            # Extract content from the AIMessage
-            if hasattr(response, "content"):
-                return response.content
-            return str(response)
+            # Generate structured response
+            response = llm_with_structured_output.invoke(prompt)
             
+            # Convert to markdown format
+            sections = [
+                "# Detailed Findings: JFK Assassination Investigation\n\n## Topic Analyses\n\n"
+            ]
+            
+            # Add topic analyses
+            for topic, analysis in response.topic_analyses.items():
+                sections.append(f"### {topic}\n\n{analysis}")
+            
+            # Add timeline
+            sections.append(f"## Chronological Timeline\n\n{response.timeline}")
+            
+            # Add key individuals
+            sections.append("## Key Individuals & Agencies\n\n")
+            for person, role in response.key_individuals.items():
+                sections.append(f"### {person}\n\n{role}")
+            
+            # Add theory analysis
+            sections.append("## Assassination Theories Analysis\n\n")
+            for theory, analysis in response.theory_analysis.items():
+                sections.append(f"### {theory}\n\n{analysis}")
+            
+            # Add remaining sections
+            sections.extend([
+                "## Inconsistencies in Official Accounts\n\n" + "\n".join([f"- {item}" for item in response.inconsistencies]),
+                "## Information Withholding Patterns\n\n" + "\n".join([f"- {item}" for item in response.information_withholding]),
+                "## Evidence Credibility Assessment\n\n"
+            ])
+            
+            # Add evidence credibility
+            for evidence, credibility in response.evidence_credibility.items():
+                sections.append(f"### {evidence}\n\n{credibility}")
+            
+            # Add likely scenarios
+            sections.append("## Most Likely Scenarios\n\n" + "\n".join([f"- {scenario}" for scenario in response.likely_scenarios]))
+            
+            # Add primary suspects
+            sections.append("## Primary Suspects\n\n")
+            for suspect, evidence_list in response.primary_suspects.items():
+                sections.append(f"### {suspect}\n\n" + "\n".join([f"- {evidence}" for evidence in evidence_list]))
+            
+            # Add alternative suspects
+            sections.append("## Alternative Suspects Analysis\n\n")
+            for suspect, analysis in response.alternative_suspects_analysis.items():
+                sections.append(f"### {suspect}\n\n")
+                
+                if isinstance(analysis, dict):
+                    for key, value in analysis.items():
+                        if isinstance(value, list):
+                            sections.append(f"#### {key.replace('_', ' ').title()}\n\n" + "\n".join([f"- {item}" for item in value]))
+                        else:
+                            sections.append(f"#### {key.replace('_', ' ').title()}\n\n{value}")
+                else:
+                    sections.append(str(analysis))
+            
+            content = "\n\n".join(sections)
+            
+            # Save detailed findings to file
+            self._save_report_file(content, "detailed_findings.md")
+            
+            return content
         except Exception as e:
-            logger.error(f"Error generating detailed findings: {e}")
-            return f"# Error Generating Detailed Findings\n\nAn error occurred: {e}"
+            logger.error(f"Error generating detailed findings with structured output: {e}")
+            logger.warning("Falling back to unstructured text generation")
+            
+            # Fall back to unstructured text generation
+            prompt = prompt_template.format(
+                analysis_summaries=analysis_summaries
+            )
+            response = self.llm.invoke(prompt)
+            content = response.content
+            
+            # Save detailed findings to file
+            self._save_report_file(content, "detailed_findings.md")
+            
+            return content
     
     @retry(
         stop=stop_after_attempt(5),

@@ -259,10 +259,40 @@ class ArchivesGovScraper:
         pdf_links = self.extract_links()
         logger.info(f"Found {len(pdf_links)} PDF documents")
         
+        # Filter out URLs where the file already exists
+        filtered_links = []
+        existing_files = []
+        
+        for url in pdf_links:
+            filename = self._sanitize_filename(url)
+            output_path = os.path.join(self.output_dir, filename)
+            if os.path.exists(output_path):
+                logger.info(f"Skipping {url} - file already exists at {output_path}")
+                existing_files.append(output_path)
+            else:
+                filtered_links.append(url)
+        
+        logger.info(f"After filtering existing files: {len(filtered_links)} PDFs need to be downloaded, {len(existing_files)} already exist")
+        
         downloaded_files = []
         documents = []
         
-        for url in tqdm(pdf_links, desc="Downloading PDFs"):
+        # Add existing files to documents list
+        for output_path in existing_files:
+            filename = os.path.basename(output_path)
+            # Use BASE_URL for more accurate URL reconstruction
+            url = f"{self.BASE_URL}/{filename}"
+            document = PDFDocument(
+                url=url,
+                filename=filename,
+                local_path=output_path,
+                downloaded=True,
+                error=None
+            )
+            documents.append(document)
+            downloaded_files.append(output_path)
+        
+        for url in tqdm(filtered_links, desc="Downloading PDFs"):
             file_path = self.download_pdf(url)
             
             # Create document object
@@ -281,5 +311,5 @@ class ArchivesGovScraper:
             # Respect the site by adding a delay with jitter between requests
             self._sleep_with_jitter()
             
-        logger.info(f"Downloaded {len(downloaded_files)} files to {self.output_dir}")
+        logger.info(f"Downloaded {len(downloaded_files) - len(existing_files)} new files, {len(existing_files)} already existed, total: {len(downloaded_files)} files in {self.output_dir}")
         return downloaded_files, documents

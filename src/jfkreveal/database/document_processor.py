@@ -14,6 +14,9 @@ import nltk
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
+from .text_cleaner import clean_pdf_text, clean_document_chunks
+from ..utils.parallel_processor import process_documents_parallel
+
 logger = logging.getLogger(__name__)
 
 # Download NLTK resources
@@ -31,7 +34,10 @@ class DocumentProcessor:
         output_dir: str = "data/processed",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        max_workers: int = None  # Number of parallel workers (None = CPU count)
+        max_workers: int = 20,  # Default to 20 parallel workers
+        skip_existing: bool = True,  # Skip already processed documents by default
+        vector_store = None,  # Optional vector store for immediate embedding
+        clean_text: bool = True  # Whether to clean text before chunking
     ):
         """
         Initialize the document processor.
@@ -41,13 +47,19 @@ class DocumentProcessor:
             output_dir: Directory to save processed chunks
             chunk_size: Target size of text chunks
             chunk_overlap: Overlap between chunks
-            max_workers: Maximum number of worker processes (None = CPU count)
+            max_workers: Maximum number of worker processes (default 20)
+            skip_existing: Whether to skip documents that were already processed
+            vector_store: Optional vector store for immediate embedding after processing
+            clean_text: Whether to clean text before chunking
         """
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.max_workers = max_workers
+        self.skip_existing = skip_existing
+        self.vector_store = vector_store
+        self.clean_text = clean_text
         
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -97,7 +109,16 @@ class DocumentProcessor:
                 if text.strip():  # Only add non-empty pages
                     full_text.append(f"[Page {page_num + 1}] {text}")
             
-            return "\n\n".join(full_text), metadata
+            raw_text = "\n\n".join(full_text)
+            
+            # Clean the text if enabled
+            if self.clean_text:
+                logger.debug(f"Cleaning text for PDF: {pdf_path}")
+                cleaned_text = clean_pdf_text(raw_text)
+                metadata["cleaned"] = True
+                return cleaned_text, metadata
+            
+            return raw_text, metadata
             
         except Exception as e:
             logger.error(f"Error processing PDF {pdf_path}: {e}")
@@ -139,6 +160,11 @@ class DocumentProcessor:
                 }
             }
             result.append(chunk)
+        
+        # Clean individual chunks if needed and not already cleaned at document level
+        if self.clean_text and not metadata.get("cleaned", False):
+            logger.debug(f"Cleaning chunks for document: {metadata.get('filename', 'unknown')}")
+            result = clean_document_chunks(result)
             
         return result
     
@@ -158,9 +184,13 @@ class DocumentProcessor:
             f"{os.path.splitext(filename)[0]}.json"
         )
         
-        # Skip if already processed
-        if os.path.exists(output_path):
+        # Skip if already processed and skip_existing is True
+        if self.skip_existing and os.path.exists(output_path):
             logger.info(f"Document already processed: {output_path}")
+            # If we have a vector store and file exists, check if we need to add it
+            if self.vector_store and not self.check_if_embedded(output_path):
+                logger.info(f"Adding previously processed document to vector store: {output_path}")
+                self.vector_store.add_documents_from_file(output_path)
             return output_path
         
         logger.info(f"Processing document: {pdf_path}")
@@ -180,16 +210,49 @@ class DocumentProcessor:
             json.dump(chunks, f, ensure_ascii=False, indent=2)
             
         logger.info(f"Saved {len(chunks)} chunks to {output_path}")
+        
+        # If vector store is provided, add the document immediately
+        if self.vector_store:
+            logger.info(f"Adding document to vector store immediately: {output_path}")
+            self.vector_store.add_documents_from_file(output_path)
+            self.mark_as_embedded(output_path)
+            
         return output_path
+    
+    def check_if_embedded(self, file_path: str) -> bool:
+        """
+        Check if a document has already been embedded in the vector store.
+        
+        Args:
+            file_path: Path to the processed document file
+            
+        Returns:
+            True if the document has been embedded, False otherwise
+        """
+        # Create a simple marker file to track embedded documents
+        marker_path = f"{file_path}.embedded"
+        return os.path.exists(marker_path)
+    
+    def mark_as_embedded(self, file_path: str) -> None:
+        """
+        Mark a document as embedded in the vector store.
+        
+        Args:
+            file_path: Path to the processed document file
+        """
+        # Create a simple marker file to track embedded documents
+        marker_path = f"{file_path}.embedded"
+        with open(marker_path, 'w') as f:
+            f.write("1")
     
     def process_all_documents(self) -> List[str]:
         """
         Process all PDF documents in the input directory in parallel.
         
         Returns:
-            List of paths to all processed chunk files
+            List of paths to processed files
         """
-        # Find all PDF files
+        # List all PDF files in input directory
         pdf_files = []
         for root, _, files in os.walk(self.input_dir):
             for file in files:
@@ -198,25 +261,33 @@ class DocumentProcessor:
                     
         logger.info(f"Found {len(pdf_files)} PDF files to process")
         
-        processed_files = []
+        # Use parallel processing for better performance
+        results = process_documents_parallel(
+            document_paths=pdf_files,
+            processing_function=self.process_document,
+            max_workers=self.max_workers
+        )
         
-        # Process documents in parallel using ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Create future objects for each PDF file
-            future_to_pdf = {
-                executor.submit(self.process_document, pdf_path): pdf_path
-                for pdf_path in pdf_files
-            }
+        # Filter out None results from failed processing
+        processed_files = [path for path in results if path is not None]
             
-            # Process results as they complete
-            for future in tqdm(concurrent.futures.as_completed(future_to_pdf), total=len(pdf_files), desc="Processing PDFs"):
-                pdf_path = future_to_pdf[future]
-                try:
-                    output_path = future.result()
-                    if output_path:
-                        processed_files.append(output_path)
-                except Exception as e:
-                    logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
-                
-        logger.info(f"Processed {len(processed_files)} documents")
+        logger.info(f"Successfully processed {len(processed_files)}/{len(pdf_files)} files")
+        
+        return processed_files
+        
+    def get_processed_documents(self) -> List[str]:
+        """
+        Get a list of all processed document files without processing any new ones.
+        This is useful when skipping OCR and going directly to vector embedding.
+        
+        Returns:
+            List of paths to all processed chunk files
+        """
+        processed_files = []
+        for root, _, files in os.walk(self.output_dir):
+            for file in files:
+                if file.lower().endswith('.json'):
+                    processed_files.append(os.path.join(root, file))
+                    
+        logger.info(f"Found {len(processed_files)} already processed documents")
         return processed_files

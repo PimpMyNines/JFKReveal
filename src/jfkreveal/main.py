@@ -35,7 +35,11 @@ class JFKReveal:
     def __init__(
         self,
         base_dir: str = ".",
-        openai_api_key: Optional[str] = None
+        openai_api_key: Optional[str] = None,
+        clean_text: bool = True,
+        use_ocr: bool = True,
+        ocr_resolution_scale: float = 2.0,
+        ocr_language: str = "eng",
     ):
         """
         Initialize the JFK document analysis pipeline.
@@ -43,9 +47,17 @@ class JFKReveal:
         Args:
             base_dir: Base directory for data
             openai_api_key: OpenAI API key (uses environment variable if not provided)
+            clean_text: Whether to clean OCR text before chunking and embedding
+            use_ocr: Whether to apply OCR to scanned pages with no text
+            ocr_resolution_scale: Scale factor for OCR resolution (higher = better quality)
+            ocr_language: Language for OCR processing
         """
         self.base_dir = base_dir
         self.openai_api_key = openai_api_key
+        self.clean_text = clean_text
+        self.use_ocr = use_ocr
+        self.ocr_resolution_scale = ocr_resolution_scale
+        self.ocr_language = ocr_language
         
         # Create data directories
         os.makedirs(os.path.join(base_dir, "data/raw"), exist_ok=True)
@@ -67,18 +79,51 @@ class JFKReveal:
         logger.info(f"Completed document scraping, downloaded {len(downloaded_files)} files")
         return downloaded_files
     
-    def process_documents(self):
-        """Process PDF documents and extract text."""
+    def process_documents(self, max_workers: int = 20, skip_existing: bool = True, vector_store = None):
+        """
+        Process PDF documents and extract text.
+        
+        Args:
+            max_workers: Number of documents to process in parallel (default 20)
+            skip_existing: Whether to skip already processed documents (default True)
+            vector_store: Optional vector store for immediate embedding
+        """
         logger.info("Starting document processing")
+        
+        processor = DocumentProcessor(
+            input_dir=os.path.join(self.base_dir, "data/raw"),
+            output_dir=os.path.join(self.base_dir, "data/processed"),
+            max_workers=max_workers,
+            skip_existing=skip_existing,
+            vector_store=vector_store,
+            clean_text=self.clean_text,
+            use_ocr=self.use_ocr,
+            ocr_resolution_scale=self.ocr_resolution_scale,
+            ocr_language=self.ocr_language
+        )
+        
+        processed_files = processor.process_all_documents()
+        
+        logger.info(f"Completed document processing, processed {len(processed_files)} files")
+        return processed_files
+    
+    def get_processed_documents(self):
+        """
+        Get a list of already processed documents without processing any new ones.
+        
+        Returns:
+            List of paths to processed documents
+        """
+        logger.info("Getting already processed documents")
         
         processor = DocumentProcessor(
             input_dir=os.path.join(self.base_dir, "data/raw"),
             output_dir=os.path.join(self.base_dir, "data/processed")
         )
         
-        processed_files = processor.process_all_documents()
+        processed_files = processor.get_processed_documents()
         
-        logger.info(f"Completed document processing, processed {len(processed_files)} files")
+        logger.info(f"Found {len(processed_files)} already processed documents")
         return processed_files
     
     def build_vector_database(self) -> Optional[VectorStore]:
@@ -91,11 +136,6 @@ class JFKReveal:
                 openai_api_key=self.openai_api_key
             )
             
-            total_chunks = vector_store.add_all_documents(
-                processed_dir=os.path.join(self.base_dir, "data/processed")
-            )
-            
-            logger.info(f"Completed vector database build, added {total_chunks} chunks")
             return vector_store
             
         except Exception as e:
@@ -103,12 +143,23 @@ class JFKReveal:
             logger.error("Skipping vector database build and analysis steps")
             return None
     
+    def add_all_documents_to_vector_store(self, vector_store):
+        """Add all processed documents to the vector store."""
+        logger.info("Adding all documents to vector store")
+        
+        total_chunks = vector_store.add_all_documents(
+            processed_dir=os.path.join(self.base_dir, "data/processed")
+        )
+        
+        logger.info(f"Completed vector database build, added {total_chunks} chunks")
+        return total_chunks
+    
     def analyze_documents(self, vector_store):
         """Analyze documents and generate topic analyses."""
         logger.info("Starting document analysis")
         
         # Get model name from environment variables if set
-        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")  # Using gpt-4o as default
         
         analyzer = DocumentAnalyzer(
             vector_store=vector_store,
@@ -139,7 +190,7 @@ class JFKReveal:
         logger.info("Completed report generation")
         return report
     
-    def run_pipeline(self, skip_scraping=False, skip_processing=False, skip_analysis=False):
+    def run_pipeline(self, skip_scraping=False, skip_processing=False, skip_analysis=False, use_existing_processed=False, max_workers=20):
         """
         Run the complete document analysis pipeline.
         
@@ -147,6 +198,8 @@ class JFKReveal:
             skip_scraping: Skip document scraping
             skip_processing: Skip document processing
             skip_analysis: Skip document analysis
+            use_existing_processed: Use existing processed documents without processing new ones
+            max_workers: Number of documents to process in parallel
         """
         logger.info("Starting JFK documents analysis pipeline")
         
@@ -156,26 +209,42 @@ class JFKReveal:
         else:
             logger.info("Skipping document scraping")
         
-        # Step 2: Process documents
-        if not skip_processing:
-            self.process_documents()
-        else:
-            logger.info("Skipping document processing")
-        
-        # Step 3: Build vector database
+        # Initialize vector store early for immediate embedding
+        vector_store = None
         if not skip_analysis:
             vector_store = self.build_vector_database()
-            
-            # Step 4: Analyze documents if vector store was created successfully
-            if vector_store is not None:
-                self.analyze_documents(vector_store)
-            else:
-                logger.warning("Skipping analysis phase due to vector store initialization failure")
+            if vector_store is None:
+                logger.warning("Failed to initialize vector store, reverting to default processing without embedding")
                 skip_analysis = True
+        
+        # Step 2: Process documents or use existing processed documents
+        if not skip_processing:
+            if use_existing_processed:
+                logger.info("Using existing processed documents")
+                processed_files = self.get_processed_documents()
+                
+                # If we have a vector store, ensure all existing documents are added
+                if vector_store is not None:
+                    logger.info("Adding existing processed documents to vector store")
+                    for file_path in processed_files:
+                        vector_store.add_documents_from_file(file_path)
+            else:
+                # Process documents with immediate embedding if vector store is available
+                self.process_documents(max_workers=max_workers, vector_store=vector_store)
+        else:
+            logger.info("Skipping document processing")
+            
+            # If we're skipping processing but not analysis, we need to ensure the vector store has all documents
+            if not skip_analysis and vector_store is not None:
+                self.add_all_documents_to_vector_store(vector_store)
+        
+        # Step 3: Analyze documents if vector store was created successfully
+        if not skip_analysis and vector_store is not None:
+            self.analyze_documents(vector_store)
         else:
             logger.info("Skipping vector database build and analysis")
         
-        # Step 5: Generate report
+        # Step 4: Generate report
         if not skip_analysis:
             self.generate_report()
             # Print final report location
@@ -207,19 +276,39 @@ def main():
                         help="Skip document processing")
     parser.add_argument("--skip-analysis", action="store_true",
                         help="Skip document analysis and report generation")
+    parser.add_argument("--use-existing-processed", action="store_true",
+                        help="Use existing processed documents without processing new ones")
+    parser.add_argument("--max-workers", type=int, default=20,
+                        help="Number of documents to process in parallel (default: 20)")
+    parser.add_argument("--no-clean-text", action="store_true",
+                        help="Disable text cleaning for OCR documents")
+    
+    # OCR-related arguments
+    parser.add_argument("--no-ocr", action="store_true",
+                        help="Disable OCR for scanned documents")
+    parser.add_argument("--ocr-resolution", type=float, default=2.0,
+                        help="OCR resolution scale factor (higher = better quality but slower, default: 2.0)")
+    parser.add_argument("--ocr-language", type=str, default="eng",
+                        help="Language for OCR (default: eng)")
     
     args = parser.parse_args()
     
     # Run pipeline
     jfk_reveal = JFKReveal(
         base_dir=args.base_dir,
-        openai_api_key=args.openai_api_key
+        openai_api_key=args.openai_api_key,
+        clean_text=not args.no_clean_text,
+        use_ocr=not args.no_ocr,
+        ocr_resolution_scale=args.ocr_resolution,
+        ocr_language=args.ocr_language
     )
     
     report_path = jfk_reveal.run_pipeline(
         skip_scraping=args.skip_scraping,
         skip_processing=args.skip_processing,
-        skip_analysis=args.skip_analysis
+        skip_analysis=args.skip_analysis,
+        use_existing_processed=args.use_existing_processed,
+        max_workers=args.max_workers
     )
     
     print(f"\nAnalysis complete! Final report available at: {report_path}")

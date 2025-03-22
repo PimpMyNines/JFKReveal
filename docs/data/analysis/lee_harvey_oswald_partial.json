@@ -1,0 +1,133 @@
+{
+  "topic": "Lee Harvey Oswald",
+  "summary": {
+    "key_findings": [],
+    "consistent_information": [],
+    "contradictions": [],
+    "potential_evidence": [],
+    "missing_information": [],
+    "assassination_theories": [],
+    "credibility": "unknown",
+    "document_references": {}
+  },
+  "document_analyses": [
+    {
+      "text": "This is a sample document chunk for testing purposes. It mentions Lee Harvey Oswald as the alleged assassin of President John F. Kennedy. The Warren Commission concluded that Oswald acted alone, but controversy has surrounded this conclusion for decades.",
+      "metadata": {
+        "chunk_id": "sample_chunk_001",
+        "date": "1964-09-24",
+        "document_id": "sample_doc_001",
+        "page": 1,
+        "source": "Sample Test Document"
+      },
+      "analysis": {
+        "key_individuals": [
+          {
+            "information": "Lee Harvey Oswald as the alleged assassin of President John F. Kennedy",
+            "quote": "It mentions Lee Harvey Oswald as the alleged assassin of President John F. Kennedy.",
+            "page": null
+          }
+        ],
+        "government_agencies": [
+          {
+            "information": "The Warren Commission",
+            "quote": "The Warren Commission concluded that Oswald acted alone.",
+            "page": null
+          }
+        ],
+        "locations": [],
+        "dates_and_times": [],
+        "potential_coverup": [
+          {
+            "information": "Controversy surrounding the Warren Commission's conclusion",
+            "quote": "The Warren Commission concluded that Oswald acted alone, but controversy has surrounded this conclusion for decades.",
+            "page": null
+          }
+        ],
+        "suspicious_activities": [],
+        "assassination_theories": [
+          {
+            "information": "Controversy over Oswald acting alone",
+            "quote": "The Warren Commission concluded that Oswald acted alone, but controversy has surrounded this conclusion for decades.",
+            "page": null
+          }
+        ],
+        "inconsistencies": [],
+        "weapons_references": [],
+        "redacted_information": []
+      },
+      "error": null
+    },
+    {
+      "text": "Jack Ruby shot and killed Oswald on November 24, 1963, while Oswald was being transferred from the city jail to the county jail. The shooting was captured on live television, fueling speculation about a possible conspiracy and coverup.",
+      "metadata": {
+        "chunk_id": "sample_chunk_002",
+        "date": "1964-09-24",
+        "document_id": "sample_doc_001",
+        "page": 2,
+        "source": "Sample Test Document"
+      },
+      "analysis": {
+        "key_individuals": [
+          {
+            "information": "Jack Ruby",
+            "quote": "Jack Ruby shot and killed Oswald on November 24, 1963",
+            "page": null
+          },
+          {
+            "information": "Oswald",
+            "quote": "Jack Ruby shot and killed Oswald on November 24, 1963",
+            "page": null
+          }
+        ],
+        "government_agencies": [],
+        "locations": [
+          {
+            "information": "city jail",
+            "quote": "while Oswald was being transferred from the city jail to the county jail",
+            "page": null
+          },
+          {
+            "information": "county jail",
+            "quote": "while Oswald was being transferred from the city jail to the county jail",
+            "page": null
+          }
+        ],
+        "dates_and_times": [
+          {
+            "information": "November 24, 1963",
+            "quote": "Jack Ruby shot and killed Oswald on November 24, 1963",
+            "page": null
+          }
+        ],
+        "potential_coverup": [
+          {
+            "information": "Speculation about a possible conspiracy and coverup",
+            "quote": "fueling speculation about a possible conspiracy and coverup",
+            "page": null
+          }
+        ],
+        "suspicious_activities": [
+          {
+            "information": "Shooting of Oswald during transfer",
+            "quote": "Jack Ruby shot and killed Oswald on November 24, 1963, while Oswald was being transferred from the city jail to the county jail",
+            "page": null
+          }
+        ],
+        "assassination_theories": [
+          {
+            "information": "Speculation about conspiracy",
+            "quote": "fueling speculation about a possible conspiracy and coverup",
+            "page": null
+          }
+        ],
+        "inconsistencies": [],
+        "weapons_references": [],
+        "redacted_information": []
+      },
+      "error": null
+    }
+  ],
+  "num_documents": 2,
+  "error": "Error code: 400 - {'error': {'message': \"Invalid schema for response_format 'TopicSummary': In context=('properties', 'credibility'), 'default' is not permitted.\", 'type': 'invalid_request_error', 'param': 'response_format', 'code': None}}"
+}

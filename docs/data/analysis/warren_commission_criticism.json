@@ -1,0 +1,35 @@
+{
+  "topic": "Warren Commission criticism",
+  "summary": {
+    "key_findings": [
+      "The Warren Commission's methodology and conclusions have been widely criticized for being incomplete and potentially biased.",
+      "Several documents suggest that the Commission failed to thoroughly investigate certain leads and testimonies that contradicted its conclusions.",
+      "There is a recurring theme of dissatisfaction with the Commission's reliance on the FBI and CIA for information, which some documents suggest may have been compromised."
+    ],
+    "consistent_information": [
+      "Multiple sources indicate that the Warren Commission did not adequately address the possibility of a conspiracy.",
+      "There is consistent criticism regarding the Commission's handling of witness testimonies, particularly those that contradicted the lone gunman theory."
+    ],
+    "contradictions": [
+      "Some documents highlight discrepancies between the Warren Commission's report and other investigative findings, such as the House Select Committee on Assassinations, which suggested a probable conspiracy.",
+      "There are contradictions in the testimonies of key witnesses as reported by the Commission and other investigative bodies."
+    ],
+    "potential_evidence": [
+      "Certain documents imply that the Warren Commission may have been pressured to reach a specific conclusion, potentially indicating a coverup.",
+      "There are references to withheld or destroyed evidence that could have been crucial to the investigation."
+    ],
+    "missing_information": [
+      "The Commission's report lacks detailed analysis of certain forensic evidence, such as the trajectory of the bullets.",
+      "There is a notable absence of in-depth investigation into Lee Harvey Oswald's connections with intelligence agencies."
+    ],
+    "assassination_theories": [
+      "The documents frequently reference theories involving multiple shooters and potential involvement of organized crime or foreign governments.",
+      "There is mention of Oswald's possible connections to the CIA and other intelligence agencies, which aligns with some conspiracy theories."
+    ],
+    "credibility": "medium",
+    "document_references": {}
+  },
+  "document_analyses": [],
+  "num_documents": 0,
+  "error": null
+}

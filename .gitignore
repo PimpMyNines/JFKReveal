@@ -35,6 +35,7 @@ env/
 data/
 jfkreveal.log
 .env
+CLAUDE.md
 
 # Testing
 .coverage
