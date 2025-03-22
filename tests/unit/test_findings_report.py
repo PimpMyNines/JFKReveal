@@ -1,297 +1,189 @@
 """
-Unit tests for the FindingsReport class with multi-model support
+Unit tests for the FindingsReport class
 """
 import os
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
 from jfkreveal.summarization.findings_report import FindingsReport
-from jfkreveal.utils.model_config import ReportType, ModelConfiguration
-from jfkreveal.utils.model_registry import ModelProvider
-
 
 class TestFindingsReport:
-    """Test the FindingsReport class with focus on multi-model functionality"""
+    """Test the FindingsReport class"""
 
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    def test_init(self, mock_model_config_class, temp_data_dir):
+    def test_init(self, temp_data_dir):
         """Test initialization of FindingsReport"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.STANDARD
-        
         # Create report instance
         report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
+            analysis_dir=temp_data_dir["root"] + "/analysis",
             output_dir=temp_data_dir["root"] + "/reports"
         )
         
         # Verify attributes
-        assert report.data_dir == temp_data_dir["root"] + "/data"
+        assert report.analysis_dir == temp_data_dir["root"] + "/analysis"
         assert report.output_dir == temp_data_dir["root"] + "/reports"
-        assert report.model_config == mock_config
-        assert report.report_type == ReportType.STANDARD
+        assert report.model_name == "gpt-4o"
+        assert report.temperature == 0.1
+        assert report.max_retries == 5
         
         # Verify output directory was created
         assert os.path.exists(temp_data_dir["root"] + "/reports")
 
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    def test_get_model_output_dir(self, mock_model_config_class, temp_data_dir):
-        """Test getting model-specific output directory"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.MULTI_MODEL_COMPARISON
+    @patch('jfkreveal.summarization.findings_report.FindingsReport._save_report_file')
+    @patch('jfkreveal.summarization.findings_report.ChatOpenAI')
+    def test_generate_executive_summary(self, mock_chat_openai, mock_save_report, temp_data_dir):
+        """Test generating executive summary"""
+        # Setup mock LLM
+        mock_llm = MagicMock()
+        mock_chat_openai.return_value = mock_llm
+        
+        # Mock LLM response
+        mock_response = MagicMock()
+        mock_response.content = "Executive Summary Content"
+        mock_llm.invoke.return_value = mock_response
         
         # Create report instance
         report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
+            analysis_dir=temp_data_dir["root"] + "/analysis",
             output_dir=temp_data_dir["root"] + "/reports"
         )
         
-        # Call method with model name
-        model_dir = report._get_model_output_dir("gpt-4o")
-        
-        # Verify model-specific directory was created
-        expected_dir = os.path.join(temp_data_dir["root"] + "/reports", "gpt-4o")
-        assert model_dir == expected_dir
-        assert os.path.exists(expected_dir)
-        
-        # Call method without model name (default directory)
-        default_dir = report._get_model_output_dir(None)
-        
-        # Verify default directory
-        assert default_dir == temp_data_dir["root"] + "/reports"
-
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._save_report_file')
-    @patch('jfkreveal.summarization.findings_report.ChatOpenAI')
-    def test_create_full_report_for_model(self, mock_chat_openai, mock_save_report, mock_model_config_class, temp_data_dir):
-        """Test creating a full report for a specific model"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.MULTI_MODEL_COMPARISON
-        
-        # Setup mock LLM
-        mock_llm = MagicMock()
-        mock_chat_openai.return_value = mock_llm
-        
-        # Setup mock for saving reports
-        mock_save_report.return_value = None
-        
-        # Create mock report content
-        mock_exec_summary = "Executive Summary Content"
-        mock_detailed_findings = "Detailed Findings Content"
-        mock_suspects_analysis = "Suspects Analysis Content"
-        mock_coverup_analysis = "Coverup Analysis Content"
-        
-        # Create report instance with mock generation methods
-        with patch.multiple(
-            'jfkreveal.summarization.findings_report.FindingsReport',
-            generate_executive_summary=MagicMock(return_value=mock_exec_summary),
-            generate_detailed_findings=MagicMock(return_value=mock_detailed_findings),
-            generate_suspects_analysis=MagicMock(return_value=mock_suspects_analysis),
-            generate_coverup_analysis=MagicMock(return_value=mock_coverup_analysis)
-        ):
-            report = FindingsReport(
-                data_dir=temp_data_dir["root"] + "/data",
-                output_dir=temp_data_dir["root"] + "/reports"
-            )
-            
-            # Call method
-            model_info = {"name": "gpt-4o", "provider": ModelProvider.OPENAI}
-            report._create_full_report_for_model(model_info)
-        
-        # Verify _save_report_file was called 4 times (one for each report section)
-        assert mock_save_report.call_count == 4
-        
-        # Verify each report section was generated
-        report.generate_executive_summary.assert_called_once()
-        report.generate_detailed_findings.assert_called_once()
-        report.generate_suspects_analysis.assert_called_once()
-        report.generate_coverup_analysis.assert_called_once()
-
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._save_report_file')
-    @patch('jfkreveal.summarization.findings_report.ChatOpenAI')
-    @patch('os.path.exists')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_create_consolidated_report(self, mock_file, mock_exists, mock_chat_openai, 
-                                       mock_save_report, mock_model_config_class, temp_data_dir):
-        """Test creating a consolidated report from multiple model reports"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.CONSOLIDATED
-        
-        # Setup mock for checking file existence
-        mock_exists.return_value = True
-        
-        # Setup mock LLM
-        mock_llm = MagicMock()
-        mock_llm.invoke = MagicMock(return_value=MagicMock(content="Consolidated analysis content"))
-        mock_chat_openai.return_value = mock_llm
-        
-        # Mock for reading individual model reports
-        model_report_contents = {
-            "gpt-4o": {
-                "executive_summary.md": "GPT-4o Executive Summary",
-                "detailed_findings.md": "GPT-4o Detailed Findings",
-                "suspects_analysis.md": "GPT-4o Suspects Analysis",
-                "coverup_analysis.md": "GPT-4o Coverup Analysis"
-            },
-            "llama3": {
-                "executive_summary.md": "Llama3 Executive Summary",
-                "detailed_findings.md": "Llama3 Detailed Findings",
-                "suspects_analysis.md": "Llama3 Suspects Analysis",
-                "coverup_analysis.md": "Llama3 Coverup Analysis"
+        # Mock loading analyses
+        mock_analyses = [
+            {
+                "topic": "Test Topic 1",
+                "summary": {
+                    "key_findings": ["Finding 1", "Finding 2"],
+                    "potential_evidence": ["Evidence 1", "Evidence 2"],
+                    "credibility": "High"
+                }
             }
-        }
-        
-        def mock_file_reader(file_path, *args, **kwargs):
-            # Extract model and file name from the path
-            # Assuming path format: some/path/model_name/file_name.md
-            path_parts = file_path.split(os.sep)
-            if len(path_parts) < 2:
-                return mock_open().return_value
-                
-            model_name = path_parts[-2]  # Second to last part is model name
-            file_name = path_parts[-1]   # Last part is file name
-            
-            if model_name in model_report_contents and file_name in model_report_contents[model_name]:
-                m = mock_open(read_data=model_report_contents[model_name][file_name])
-                return m()
-            return mock_open().return_value
-        
-        # Set the side_effect to use our custom function
-        mock_file.side_effect = mock_file_reader
-        
-        # Create report instance
-        report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
-            output_dir=temp_data_dir["root"] + "/reports"
-        )
-        
-        # Setup model info
-        models = [
-            {"name": "gpt-4o", "provider": ModelProvider.OPENAI},
-            {"name": "llama3", "provider": ModelProvider.OLLAMA}
         ]
+        report.load_analyses = MagicMock(return_value=mock_analyses)
         
         # Call method
-        report._create_consolidated_report(models)
-        
-        # Verify LLM was called for each section
-        assert mock_llm.invoke.call_count == 4
-        
-        # Verify save_report_file was called for each consolidated section
-        assert mock_save_report.call_count == 4
-
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_full_report_for_model')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_consolidated_report')
-    def test_generate_full_report_standard(self, mock_consolidated, mock_full_report, mock_model_config_class, temp_data_dir):
-        """Test generate_full_report with standard report type"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.STANDARD
-        mock_config.get_analysis_models.return_value = [
-            {"name": "gpt-4o", "provider": ModelProvider.OPENAI}
-        ]
-        
-        # Create report instance
-        report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
-            output_dir=temp_data_dir["root"] + "/reports"
-        )
-        
-        # Call method
-        result = report.generate_full_report()
-        
-        # Verify _create_full_report_for_model was called only once with primary model
-        mock_full_report.assert_called_once()
-        args = mock_full_report.call_args[0][0]
-        assert args["name"] == "gpt-4o"
-        
-        # Verify _create_consolidated_report was not called
-        mock_consolidated.assert_not_called()
+        result = report.generate_executive_summary(mock_analyses)
         
         # Verify result
-        assert result is True
+        assert "Executive Summary Content" in result
+        
+        # Verify LLM was called with correct prompt
+        mock_llm.invoke.assert_called_once()
+        
+        # Verify report was saved
+        mock_save_report.assert_called_once()
 
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_full_report_for_model')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_consolidated_report')
-    def test_generate_full_report_multi_model(self, mock_consolidated, mock_full_report, mock_model_config_class, temp_data_dir):
-        """Test generate_full_report with multi-model comparison"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.MULTI_MODEL_COMPARISON
-        mock_config.get_analysis_models.return_value = [
-            {"name": "gpt-4o", "provider": ModelProvider.OPENAI},
-            {"name": "claude-3-opus", "provider": ModelProvider.ANTHROPIC},
-            {"name": "llama3", "provider": ModelProvider.OLLAMA}
-        ]
+    @patch('jfkreveal.summarization.findings_report.FindingsReport._save_report_file')
+    @patch('jfkreveal.summarization.findings_report.ChatOpenAI')
+    def test_generate_detailed_findings(self, mock_chat_openai, mock_save_report, temp_data_dir):
+        """Test generating detailed findings"""
+        # Setup mock LLM
+        mock_llm = MagicMock()
+        mock_chat_openai.return_value = mock_llm
+        
+        # Create a mock response for structured output fallback
+        mock_response = MagicMock()
+        mock_response.content = "Detailed Findings Content"
+        
+        # Mock the regular invoke method for fallback
+        mock_llm.invoke.return_value = mock_response
         
         # Create report instance
         report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
+            analysis_dir=temp_data_dir["root"] + "/analysis",
             output_dir=temp_data_dir["root"] + "/reports"
         )
         
-        # Call method
-        result = report.generate_full_report()
+        # Replace report's LLM with our mock
+        report.llm = mock_llm
         
-        # Verify _create_full_report_for_model was called for each model
-        assert mock_full_report.call_count == 3
-        model_names = [call[0][0]["name"] for call in mock_full_report.call_args_list]
-        assert "gpt-4o" in model_names
-        assert "claude-3-opus" in model_names
-        assert "llama3" in model_names
-        
-        # Verify _create_consolidated_report was not called (not relevant for multi-model)
-        mock_consolidated.assert_not_called()
-        
-        # Verify result
-        assert result is True
-
-    @patch('jfkreveal.utils.model_config.ModelConfiguration')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_full_report_for_model')
-    @patch('jfkreveal.summarization.findings_report.FindingsReport._create_consolidated_report')
-    def test_generate_full_report_consolidated(self, mock_consolidated, mock_full_report, mock_model_config_class, temp_data_dir):
-        """Test generate_full_report with consolidated model reports"""
-        # Setup mock config
-        mock_config = MagicMock()
-        mock_model_config_class.return_value = mock_config
-        mock_config.get_report_type.return_value = ReportType.CONSOLIDATED
-        mock_config.get_analysis_models.return_value = [
-            {"name": "gpt-4o", "provider": ModelProvider.OPENAI},
-            {"name": "claude-3-opus", "provider": ModelProvider.ANTHROPIC}
+        # Mock loading analyses
+        mock_analyses = [
+            {
+                "topic": "Test Topic 1",
+                "documents": [
+                    {"document_id": "doc1", "title": "Document 1"}
+                ],
+                "entities": [
+                    {"name": "Person 1", "type": "PERSON"}
+                ],
+                "summary": {
+                    "key_findings": ["Finding 1", "Finding 2"],
+                    "potential_evidence": ["Evidence 1", "Evidence 2"]
+                }
+            }
         ]
+        report.load_analyses = MagicMock(return_value=mock_analyses)
+        
+        # Set up structured output to fail so it falls back to regular invoke
+        mock_structured_llm = MagicMock()
+        mock_structured_llm.invoke.side_effect = Exception("Failed structured output")
+        mock_llm.with_structured_output.return_value = mock_structured_llm
+        
+        # Call method
+        result = report.generate_detailed_findings(mock_analyses)
+        
+        # Verify that structured output was attempted but failed
+        mock_llm.with_structured_output.assert_called_once()
+        
+        # Verify that regular invoke was used as fallback
+        mock_llm.invoke.assert_called_once()
+        
+        # Verify result contains the fallback content
+        assert "Detailed Findings Content" in result
+        
+        # Verify report was saved
+        mock_save_report.assert_called_once()
+
+    def test_build_document_urls(self, temp_data_dir):
+        """Test building document URLs"""
+        # Create some PDF files
+        raw_dir = os.path.join(temp_data_dir["root"], "raw")
+        os.makedirs(raw_dir, exist_ok=True)
+        
+        # Create empty PDF files
+        pdf_files = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
+        for pdf_file in pdf_files:
+            with open(os.path.join(raw_dir, pdf_file), 'w') as f:
+                f.write("Dummy PDF")
         
         # Create report instance
         report = FindingsReport(
-            data_dir=temp_data_dir["root"] + "/data",
-            output_dir=temp_data_dir["root"] + "/reports"
+            analysis_dir=temp_data_dir["root"] + "/analysis",
+            output_dir=temp_data_dir["root"] + "/reports",
+            raw_docs_dir=raw_dir
         )
         
         # Call method
-        result = report.generate_full_report()
+        document_urls = report._build_document_urls()
         
-        # Verify _create_full_report_for_model was called for each model
-        assert mock_full_report.call_count == 2
+        # Verify URLs were built correctly
+        assert len(document_urls) == 3
+        assert "doc1" in document_urls
+        assert document_urls["doc1"].endswith("doc1.pdf")
+        assert document_urls["doc2"].endswith("doc2.pdf")
+        assert document_urls["doc3"].endswith("doc3.pdf")
+
+    @patch('builtins.open', new_callable=mock_open)
+    def test_save_report_file(self, mock_file, temp_data_dir):
+        """Test saving report file"""
+        # Create report instance
+        report = FindingsReport(
+            analysis_dir=temp_data_dir["root"] + "/analysis",
+            output_dir=temp_data_dir["root"] + "/reports"
+        )
         
-        # Verify _create_consolidated_report was called with all models
-        mock_consolidated.assert_called_once()
-        models_arg = mock_consolidated.call_args[0][0]
-        assert len(models_arg) == 2
-        model_names = [model["name"] for model in models_arg]
-        assert "gpt-4o" in model_names
-        assert "claude-3-opus" in model_names
+        # Test content
+        content = "# Test Report\n\nThis is a test report."
         
-        # Verify result
-        assert result is True
+        # Call method
+        report._save_report_file(content, "test_report.md")
+        
+        # Verify file was opened for writing
+        mock_file.assert_called_once_with(
+            os.path.join(temp_data_dir["root"] + "/reports", "test_report.md"),
+            'w',
+            encoding='utf-8'
+        )
+        
+        # Verify content was written
+        mock_file.return_value.write.assert_called_once_with(content)
