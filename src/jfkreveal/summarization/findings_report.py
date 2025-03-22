@@ -3,7 +3,6 @@ Generate comprehensive findings report from document analyses.
 """
 import os
 import json
-import logging
 import datetime
 from typing import List, Dict, Any, Optional
 
@@ -14,7 +13,11 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.exceptions import LangChainException
 import markdown
 
-logger = logging.getLogger(__name__)
+# Import the logging utilities
+from ..utils.logger import get_logger, log_execution_time, log_function_calls
+
+# Get module-specific logger
+logger = get_logger("summarization.findings_report")
 
 class ExecutiveSummaryResponse(BaseModel):
     """Executive summary response from LLM."""
@@ -28,6 +31,8 @@ class ExecutiveSummaryResponse(BaseModel):
     alternative_suspects: List[str] = Field(default_factory=list, description="Alternative suspects with supporting evidence")
     redaction_patterns: List[str] = Field(default_factory=list, description="Patterns of redaction or information withholding")
     document_credibility: str = Field(..., description="Evaluation of overall credibility and completeness of the documents")
+    # Optional fields that might be returned by LLM but aren't strictly required by our schema
+    unresolved_questions: Optional[List[str]] = Field(default_factory=list, description="Questions that remain unresolved based on available evidence")
 
 class DetailedFindingsResponse(BaseModel):
     """Detailed findings response from LLM."""
@@ -43,6 +48,9 @@ class DetailedFindingsResponse(BaseModel):
     likely_scenarios: List[str] = Field(default_factory=list, description="Reasoned conclusions about the most likely scenarios")
     primary_suspects: Dict[str, List[str]] = Field(..., description="Most likely culprit(s) with supporting evidence")
     alternative_suspects_analysis: Dict[str, Dict[str, Any]] = Field(..., description="Alternative suspects with detailed analysis")
+    # Optional fields that might be returned by LLM
+    missing_evidence: Optional[List[str]] = Field(default_factory=list, description="Evidence that is notably missing from the documents")
+    relationships: Optional[Dict[str, List[str]]] = Field(default_factory=dict, description="Relationships between key individuals or entities")
 
 class SuspectsAnalysisResponse(BaseModel):
     """Suspects analysis response from LLM."""
@@ -56,6 +64,10 @@ class SuspectsAnalysisResponse(BaseModel):
     collaborations: List[str] = Field(default_factory=list, description="Possible collaborations between suspects")
     government_involvement: str = Field(..., description="Assessment of government knowledge or involvement")
     conspiracy_analysis: str = Field(..., description="Evidence evaluation for conspiracy vs. lone gunman theories")
+    # Optional fields that might be returned by LLM
+    psychological_profiles: Optional[Dict[str, str]] = Field(default_factory=dict, description="Psychological profiles of key suspects")
+    motive_analysis: Optional[Dict[str, str]] = Field(default_factory=dict, description="Analysis of potential motives for suspects")
+    capability_assessment: Optional[Dict[str, str]] = Field(default_factory=dict, description="Assessment of suspects' capabilities")
 
 class CoverupAnalysisResponse(BaseModel):
     """Coverup analysis response from LLM."""
@@ -71,6 +83,11 @@ class CoverupAnalysisResponse(BaseModel):
     document_handling: List[str] = Field(default_factory=list, description="Unusual classification or handling of documents")
     coverup_motives: List[str] = Field(default_factory=list, description="Potential motives for a coverup")
     beneficiaries: List[str] = Field(default_factory=list, description="Entities that would have benefited from a coverup")
+    # Optional fields that might be returned by LLM
+    procedural_irregularities: Optional[List[str]] = Field(default_factory=list, description="Procedural irregularities in investigations")
+    media_manipulation: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Evidence of media manipulation")
+    security_concerns: Optional[str] = Field(None, description="National security concerns cited for information control")
+    historical_context: Optional[str] = Field(None, description="Historical context surrounding information management")
 
 class FindingsReport:
     """Generate comprehensive findings report from document analyses."""
@@ -165,6 +182,8 @@ class FindingsReport:
         logger.info(f"Built URL mapping for {len(document_urls)} documents")
         return document_urls
     
+    @log_execution_time()
+    @log_function_calls(level=logging.DEBUG)
     def load_analyses(self) -> List[Dict[str, Any]]:
         """
         Load all analysis files.
@@ -175,34 +194,53 @@ class FindingsReport:
         analyses = []
         
         # Find all JSON files
-        for file in os.listdir(self.analysis_dir):
-            if file.endswith('.json') and not file.endswith('_partial.json'):
-                file_path = os.path.join(self.analysis_dir, file)
-                
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        analysis = json.load(f)
-                        
-                        # Add PDF URLs to documents referenced in the analysis
-                        if "documents" in analysis:
-                            for i, doc in enumerate(analysis["documents"]):
-                                doc_id = doc.get("document_id")
-                                if doc_id and doc_id in self.document_urls:
-                                    analysis["documents"][i]["pdf_url"] = self.document_urls[doc_id]
-                        
-                        # Add PDF URLs to additional evidence
-                        if "additional_evidence" in analysis:
-                            for i, evidence in enumerate(analysis["additional_evidence"]):
-                                if isinstance(evidence, dict) and "document_id" in evidence:
-                                    doc_id = evidence["document_id"]
-                                    if doc_id in self.document_urls:
-                                        analysis["additional_evidence"][i]["pdf_url"] = self.document_urls[doc_id]
-                        
-                        analyses.append(analysis)
-                except Exception as e:
-                    logger.error(f"Error loading analysis file {file_path}: {e}")
+        logger.debug(f"Scanning directory {self.analysis_dir} for analysis files")
+        all_files = os.listdir(self.analysis_dir)
+        json_files = [f for f in all_files if f.endswith('.json') and not f.endswith('_partial.json')]
+        logger.debug(f"Found {len(json_files)} JSON files out of {len(all_files)} total files")
+        
+        for file in json_files:
+            file_path = os.path.join(self.analysis_dir, file)
+            logger.debug(f"Processing analysis file: {file}")
+            
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    analysis = json.load(f)
+                    
+                    # Add PDF URLs to documents referenced in the analysis
+                    if "documents" in analysis:
+                        doc_count = len(analysis["documents"])
+                        updated_count = 0
+                        for i, doc in enumerate(analysis["documents"]):
+                            doc_id = doc.get("document_id")
+                            if doc_id and doc_id in self.document_urls:
+                                analysis["documents"][i]["pdf_url"] = self.document_urls[doc_id]
+                                updated_count += 1
+                        logger.debug(f"Added PDF URLs to {updated_count}/{doc_count} documents in {file}")
+                    
+                    # Add PDF URLs to additional evidence
+                    if "additional_evidence" in analysis:
+                        evidence_count = len(analysis["additional_evidence"])
+                        updated_count = 0
+                        for i, evidence in enumerate(analysis["additional_evidence"]):
+                            if isinstance(evidence, dict) and "document_id" in evidence:
+                                doc_id = evidence["document_id"]
+                                if doc_id in self.document_urls:
+                                    analysis["additional_evidence"][i]["pdf_url"] = self.document_urls[doc_id]
+                                    updated_count += 1
+                        logger.debug(f"Added PDF URLs to {updated_count}/{evidence_count} evidence items in {file}")
+                    
+                    analyses.append(analysis)
+                    logger.debug(f"Successfully processed analysis file: {file}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in analysis file {file_path}: {e}")
+            except Exception as e:
+                logger.error(f"Error loading analysis file {file_path}: {e}", exc_info=True)
         
         logger.info(f"Loaded {len(analyses)} analysis files with PDF links")
+        if len(analyses) == 0:
+            logger.warning(f"No analysis files could be loaded from {self.analysis_dir}")
+        
         return analyses
     
     @retry(
@@ -827,6 +865,8 @@ You must adhere to these non-negotiable guidelines:
                 return response.content
             return str(response)
     
+    @log_execution_time()
+    @log_function_calls(level=logging.INFO)
     def generate_full_report(self) -> Dict[str, str]:
         """
         Generate full findings report.
@@ -835,6 +875,7 @@ You must adhere to these non-negotiable guidelines:
             Dictionary of report sections
         """
         # Load all analyses
+        logger.info("Starting full report generation")
         analyses = self.load_analyses()
         
         if not analyses:
@@ -842,10 +883,21 @@ You must adhere to these non-negotiable guidelines:
             return {"error": "No analyses found"}
         
         # Generate report sections
+        logger.info("Generating executive summary")
         executive_summary = self.generate_executive_summary(analyses)
+        logger.debug("Executive summary generated, length: %d characters", len(executive_summary))
+        
+        logger.info("Generating detailed findings")
         detailed_findings = self.generate_detailed_findings(analyses)
+        logger.debug("Detailed findings generated, length: %d characters", len(detailed_findings))
+        
+        logger.info("Generating suspects analysis")
         suspects_analysis = self.generate_suspects_analysis(analyses)
+        logger.debug("Suspects analysis generated, length: %d characters", len(suspects_analysis))
+        
+        logger.info("Generating coverup analysis") 
         coverup_analysis = self.generate_coverup_analysis(analyses)
+        logger.debug("Coverup analysis generated, length: %d characters", len(coverup_analysis))
         
         # Create report structure
         report = {
@@ -856,22 +908,262 @@ You must adhere to these non-negotiable guidelines:
         }
         
         # Save each section as markdown
+        logger.info("Saving report sections as markdown and HTML")
         for section_name, content in report.items():
-            output_file = os.path.join(self.output_dir, f"{section_name}.md")
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-            logger.info(f"Saved {section_name} to {output_file}")
+            try:
+                # Save markdown version
+                output_file = os.path.join(self.output_dir, f"{section_name}.md")
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                logger.info(f"Saved {section_name} to {output_file}")
+                
+                # Save HTML version
+                html_output = os.path.join(self.output_dir, f"{section_name}.html")
+                html_content = markdown.markdown(content, extensions=['tables', 'fenced_code'])
+                logger.debug(f"Converting {section_name} to HTML, size: {len(html_content)} bytes")
+                
+                with open(html_output, 'w', encoding='utf-8') as f:
+                    f.write(f"""<!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>JFK Assassination Analysis - {section_name.replace('_', ' ').title()}</title>
+                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                        <style>
+                            :root {{
+                                --primary: #c41e3a;
+                                --secondary: #0a3161;
+                                --text: #333;
+                                --light: #f5f5f5;
+                                --dark: #222;
+                                --accent: #8a8d93;
+                            }}
+                            
+                            * {{
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }}
+                            
+                            body {{ 
+                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                line-height: 1.6;
+                                color: var(--text);
+                                background-color: var(--light);
+                                padding: 0;
+                                margin: 0;
+                            }}
+                            
+                            .container {{
+                                max-width: 1000px;
+                                margin: 0 auto;
+                                padding: 0 20px;
+                            }}
+                            
+                            header {{
+                                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                                color: white;
+                                padding: 40px 0;
+                                text-align: center;
+                                margin-bottom: 40px;
+                                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                            }}
+                            
+                            header h1 {{
+                                font-size: 2.5rem;
+                                margin: 0;
+                                padding: 0;
+                                color: white;
+                                border: none;
+                                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                            }}
+                            
+                            .content {{
+                                background: white;
+                                padding: 40px;
+                                border-radius: 8px;
+                                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                                margin-bottom: 40px;
+                            }}
+                            
+                            h1 {{ color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }}
+                            
+                            h2 {{ 
+                                color: var(--secondary); 
+                                margin-top: 30px; 
+                                margin-bottom: 20px;
+                                padding-bottom: 10px;
+                                border-bottom: 2px solid var(--primary);
+                                font-size: 1.8rem;
+                            }}
+                            
+                            h3 {{ 
+                                color: var(--text); 
+                                margin-top: 25px;
+                                margin-bottom: 15px;
+                                font-size: 1.4rem;
+                            }}
+                            
+                            p {{ margin-bottom: 20px; font-size: 1.1rem; }}
+                            
+                            ul, ol {{ margin-bottom: 20px; padding-left: 20px; }}
+                            
+                            li {{ margin-bottom: 8px; }}
+                            
+                            blockquote {{ 
+                                background-color: #f9f9f9; 
+                                border-left: 4px solid var(--primary); 
+                                margin: 1.5em 0; 
+                                padding: 1em 20px;
+                                font-style: italic;
+                                border-radius: 0 4px 4px 0;
+                            }}
+                            
+                            code {{ 
+                                background-color: #f4f4f4; 
+                                padding: 2px 4px; 
+                                border-radius: 4px; 
+                                font-family: monospace;
+                            }}
+                            
+                            table {{ 
+                                border-collapse: collapse; 
+                                width: 100%; 
+                                margin: 20px 0; 
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                                border-radius: 4px;
+                                overflow: hidden;
+                            }}
+                            
+                            th, td {{ 
+                                padding: 12px 15px; 
+                                text-align: left; 
+                                border-bottom: 1px solid #ddd;
+                            }}
+                            
+                            th {{ 
+                                background-color: var(--secondary); 
+                                color: white;
+                                font-weight: bold;
+                                text-transform: uppercase;
+                                font-size: 0.9rem;
+                                letter-spacing: 1px;
+                            }}
+                            
+                            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                            tr:hover {{ background-color: #f1f1f1; }}
+                            
+                            a {{
+                                color: var(--primary);
+                                text-decoration: none;
+                                transition: color 0.3s;
+                            }}
+                            
+                            a:hover {{
+                                color: var(--secondary);
+                                text-decoration: underline;
+                            }}
+                            
+                            .back-link {{
+                                display: inline-block;
+                                margin: 20px 0;
+                                color: var(--primary);
+                                text-decoration: none;
+                                font-weight: bold;
+                            }}
+                            
+                            .back-link:hover {{
+                                text-decoration: underline;
+                            }}
+                            
+                            footer {{
+                                background: var(--dark);
+                                color: white;
+                                padding: 20px 0;
+                                text-align: center;
+                            }}
+                            
+                            @media (max-width: 768px) {{
+                                .content {{
+                                    padding: 20px;
+                                }}
+                                
+                                header h1 {{
+                                    font-size: 2rem;
+                                }}
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <header>
+                            <div class="container">
+                                <h1>JFK<span style="color: #f3da35;">Reveal</span> - {section_name.replace('_', ' ').title()}</h1>
+                            </div>
+                        </header>
+                        
+                        <div class="container">
+                            <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                            
+                            <div class="content">
+                                {html_content}
+                            </div>
+                            
+                            <footer>
+                                <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
+                                <p>JFKReveal - AI Analysis of Declassified Documents</p>
+                            </footer>
+                        </div>
+                    </body>
+                    </html>""")
+                
+                logger.info(f"Saved HTML version to {html_output}")
+                
+            except Exception as e:
+                logger.error(f"Error saving {section_name}: {str(e)}", exc_info=True)
+        
+        # Create combined report
+        logger.info("Creating combined full report")
+        combined_report = f"""# JFK Assassination Analysis - Full Report
+
+{executive_summary}
+
+---
+
+{detailed_findings}
+
+---
+
+{suspects_analysis}
+
+---
+
+{coverup_analysis}
+
+---
+
+*Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}*
+"""
+        
+        try:
+            # Save combined report
+            combined_output = os.path.join(self.output_dir, "full_report.md")
+            with open(combined_output, 'w', encoding='utf-8') as f:
+                f.write(combined_report)
+            logger.info(f"Saved combined report to {combined_output}")
             
-            # Also save as HTML
-            html_output = os.path.join(self.output_dir, f"{section_name}.html")
-            html_content = markdown.markdown(content, extensions=['tables', 'fenced_code'])
+            # Save as HTML
+            html_output = os.path.join(self.output_dir, "full_report.html")
+            html_content = markdown.markdown(combined_report, extensions=['tables', 'fenced_code'])
+            logger.debug(f"Converting full report to HTML, size: {len(html_content)} bytes")
+            
             with open(html_output, 'w', encoding='utf-8') as f:
                 f.write(f"""<!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>JFK Assassination Analysis - {section_name.replace('_', ' ').title()}</title>
+                    <title>JFK Assassination Analysis - Full Report</title>
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                     <style>
                         :root {{
@@ -1020,11 +1312,52 @@ You must adhere to these non-negotiable guidelines:
                             text-decoration: underline;
                         }}
                         
+                        .section-divider {{
+                            height: 3px;
+                            background: linear-gradient(to right, var(--primary), var(--secondary));
+                            margin: 40px 0;
+                            border-radius: 2px;
+                        }}
+                        
                         footer {{
                             background: var(--dark);
                             color: white;
                             padding: 20px 0;
                             text-align: center;
+                        }}
+                        
+                        .toc {{
+                            background: #f5f5f5;
+                            padding: 20px;
+                            border-radius: 8px;
+                            margin-bottom: 30px;
+                        }}
+                        
+                        .toc h3 {{
+                            margin-top: 0;
+                            color: var(--secondary);
+                        }}
+                        
+                        .toc ul {{
+                            list-style-type: none;
+                            padding-left: 0;
+                        }}
+                        
+                        .toc li {{
+                            margin-bottom: 10px;
+                        }}
+                        
+                        .toc a {{
+                            display: block;
+                            padding: 5px 10px;
+                            border-left: 3px solid transparent;
+                            transition: all 0.3s;
+                        }}
+                        
+                        .toc a:hover {{
+                            border-left: 3px solid var(--primary);
+                            background: rgba(0,0,0,0.03);
+                            text-decoration: none;
                         }}
                         
                         @media (max-width: 768px) {{
@@ -1041,7 +1374,7 @@ You must adhere to these non-negotiable guidelines:
                 <body>
                     <header>
                         <div class="container">
-                            <h1>JFK<span style="color: #f3da35;">Reveal</span> - {section_name.replace('_', ' ').title()}</h1>
+                            <h1>JFK<span style="color: #f3da35;">Reveal</span> - Full Analysis Report</h1>
                         </div>
                     </header>
                     
@@ -1049,7 +1382,41 @@ You must adhere to these non-negotiable guidelines:
                         <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
                         
                         <div class="content">
-                            {html_content}
+                            <div class="toc">
+                                <h3>Table of Contents</h3>
+                                <ul>
+                                    <li><a href="#executive-summary">Executive Summary</a></li>
+                                    <li><a href="#detailed-findings">Detailed Findings</a></li>
+                                    <li><a href="#suspects-analysis">Suspects Analysis</a></li>
+                                    <li><a href="#coverup-analysis">Coverup Analysis</a></li>
+                                </ul>
+                            </div>
+                            
+                            <div id="executive-summary">
+                                <h2>Executive Summary</h2>
+                                {html_content.replace('<h1>JFK Assassination Analysis - Full Report</h1>', '').split('<hr />', 1)[0]}
+                            </div>
+                            
+                            <div class="section-divider"></div>
+                            
+                            <div id="detailed-findings">
+                                <h2>Detailed Findings</h2>
+                                {html_content.split('<hr />', 2)[1].split('<hr />', 1)[0]}
+                            </div>
+                            
+                            <div class="section-divider"></div>
+                            
+                            <div id="suspects-analysis">
+                                <h2>Suspects Analysis</h2>
+                                {html_content.split('<hr />', 3)[2].split('<hr />', 1)[0]}
+                            </div>
+                            
+                            <div class="section-divider"></div>
+                            
+                            <div id="coverup-analysis">
+                                <h2>Coverup Analysis</h2>
+                                {html_content.split('<hr />', 4)[3].split('<hr />', 1)[0]}
+                            </div>
                         </div>
                         
                         <footer>
@@ -1059,306 +1426,11 @@ You must adhere to these non-negotiable guidelines:
                     </div>
                 </body>
                 </html>""")
+            
+            logger.info(f"Saved combined HTML report to {html_output}")
         
-        # Create combined report
-        combined_report = f"""# JFK Assassination Analysis - Full Report
-
-{executive_summary}
-
----
-
-{detailed_findings}
-
----
-
-{suspects_analysis}
-
----
-
-{coverup_analysis}
-
----
-
-*Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}*
-"""
+        except Exception as e:
+            logger.error(f"Error creating combined report: {str(e)}", exc_info=True)
         
-        # Save combined report
-        combined_output = os.path.join(self.output_dir, "full_report.md")
-        with open(combined_output, 'w', encoding='utf-8') as f:
-            f.write(combined_report)
-        logger.info(f"Saved combined report to {combined_output}")
-        
-        # Save as HTML
-        html_output = os.path.join(self.output_dir, "full_report.html")
-        html_content = markdown.markdown(combined_report, extensions=['tables', 'fenced_code'])
-        with open(html_output, 'w', encoding='utf-8') as f:
-            f.write(f"""<!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>JFK Assassination Analysis - Full Report</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                <style>
-                    :root {{
-                        --primary: #c41e3a;
-                        --secondary: #0a3161;
-                        --text: #333;
-                        --light: #f5f5f5;
-                        --dark: #222;
-                        --accent: #8a8d93;
-                    }}
-                    
-                    * {{
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }}
-                    
-                    body {{ 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        line-height: 1.6;
-                        color: var(--text);
-                        background-color: var(--light);
-                        padding: 0;
-                        margin: 0;
-                    }}
-                    
-                    .container {{
-                        max-width: 1000px;
-                        margin: 0 auto;
-                        padding: 0 20px;
-                    }}
-                    
-                    header {{
-                        background: linear-gradient(135deg, var(--primary), var(--secondary));
-                        color: white;
-                        padding: 40px 0;
-                        text-align: center;
-                        margin-bottom: 40px;
-                        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-                    }}
-                    
-                    header h1 {{
-                        font-size: 2.5rem;
-                        margin: 0;
-                        padding: 0;
-                        color: white;
-                        border: none;
-                        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-                    }}
-                    
-                    .content {{
-                        background: white;
-                        padding: 40px;
-                        border-radius: 8px;
-                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-                        margin-bottom: 40px;
-                    }}
-                    
-                    h1 {{ color: var(--secondary); font-size: 2.2rem; margin-bottom: 20px; }}
-                    
-                    h2 {{ 
-                        color: var(--secondary); 
-                        margin-top: 30px; 
-                        margin-bottom: 20px;
-                        padding-bottom: 10px;
-                        border-bottom: 2px solid var(--primary);
-                        font-size: 1.8rem;
-                    }}
-                    
-                    h3 {{ 
-                        color: var(--text); 
-                        margin-top: 25px;
-                        margin-bottom: 15px;
-                        font-size: 1.4rem;
-                    }}
-                    
-                    p {{ margin-bottom: 20px; font-size: 1.1rem; }}
-                    
-                    ul, ol {{ margin-bottom: 20px; padding-left: 20px; }}
-                    
-                    li {{ margin-bottom: 8px; }}
-                    
-                    blockquote {{ 
-                        background-color: #f9f9f9; 
-                        border-left: 4px solid var(--primary); 
-                        margin: 1.5em 0; 
-                        padding: 1em 20px;
-                        font-style: italic;
-                        border-radius: 0 4px 4px 0;
-                    }}
-                    
-                    code {{ 
-                        background-color: #f4f4f4; 
-                        padding: 2px 4px; 
-                        border-radius: 4px; 
-                        font-family: monospace;
-                    }}
-                    
-                    table {{ 
-                        border-collapse: collapse; 
-                        width: 100%; 
-                        margin: 20px 0; 
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        border-radius: 4px;
-                        overflow: hidden;
-                    }}
-                    
-                    th, td {{ 
-                        padding: 12px 15px; 
-                        text-align: left; 
-                        border-bottom: 1px solid #ddd;
-                    }}
-                    
-                    th {{ 
-                        background-color: var(--secondary); 
-                        color: white;
-                        font-weight: bold;
-                        text-transform: uppercase;
-                        font-size: 0.9rem;
-                        letter-spacing: 1px;
-                    }}
-                    
-                    tr:nth-child(even) {{ background-color: #f9f9f9; }}
-                    tr:hover {{ background-color: #f1f1f1; }}
-                    
-                    a {{
-                        color: var(--primary);
-                        text-decoration: none;
-                        transition: color 0.3s;
-                    }}
-                    
-                    a:hover {{
-                        color: var(--secondary);
-                        text-decoration: underline;
-                    }}
-                    
-                    .back-link {{
-                        display: inline-block;
-                        margin: 20px 0;
-                        color: var(--primary);
-                        text-decoration: none;
-                        font-weight: bold;
-                    }}
-                    
-                    .back-link:hover {{
-                        text-decoration: underline;
-                    }}
-                    
-                    .section-divider {{
-                        height: 3px;
-                        background: linear-gradient(to right, var(--primary), var(--secondary));
-                        margin: 40px 0;
-                        border-radius: 2px;
-                    }}
-                    
-                    footer {{
-                        background: var(--dark);
-                        color: white;
-                        padding: 20px 0;
-                        text-align: center;
-                    }}
-                    
-                    .toc {{
-                        background: #f5f5f5;
-                        padding: 20px;
-                        border-radius: 8px;
-                        margin-bottom: 30px;
-                    }}
-                    
-                    .toc h3 {{
-                        margin-top: 0;
-                        color: var(--secondary);
-                    }}
-                    
-                    .toc ul {{
-                        list-style-type: none;
-                        padding-left: 0;
-                    }}
-                    
-                    .toc li {{
-                        margin-bottom: 10px;
-                    }}
-                    
-                    .toc a {{
-                        display: block;
-                        padding: 5px 10px;
-                        border-left: 3px solid transparent;
-                        transition: all 0.3s;
-                    }}
-                    
-                    .toc a:hover {{
-                        border-left: 3px solid var(--primary);
-                        background: rgba(0,0,0,0.03);
-                        text-decoration: none;
-                    }}
-                    
-                    @media (max-width: 768px) {{
-                        .content {{
-                            padding: 20px;
-                        }}
-                        
-                        header h1 {{
-                            font-size: 2rem;
-                        }}
-                    }}
-                </style>
-            </head>
-            <body>
-                <header>
-                    <div class="container">
-                        <h1>JFK<span style="color: #f3da35;">Reveal</span> - Full Analysis Report</h1>
-                    </div>
-                </header>
-                
-                <div class="container">
-                    <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
-                    
-                    <div class="content">
-                        <div class="toc">
-                            <h3>Table of Contents</h3>
-                            <ul>
-                                <li><a href="#executive-summary">Executive Summary</a></li>
-                                <li><a href="#detailed-findings">Detailed Findings</a></li>
-                                <li><a href="#suspects-analysis">Suspects Analysis</a></li>
-                                <li><a href="#coverup-analysis">Coverup Analysis</a></li>
-                            </ul>
-                        </div>
-                        
-                        <div id="executive-summary">
-                            <h2>Executive Summary</h2>
-                            {html_content.replace('<h1>JFK Assassination Analysis - Full Report</h1>', '').split('<hr />', 1)[0]}
-                        </div>
-                        
-                        <div class="section-divider"></div>
-                        
-                        <div id="detailed-findings">
-                            <h2>Detailed Findings</h2>
-                            {html_content.split('<hr />', 2)[1].split('<hr />', 1)[0]}
-                        </div>
-                        
-                        <div class="section-divider"></div>
-                        
-                        <div id="suspects-analysis">
-                            <h2>Suspects Analysis</h2>
-                            {html_content.split('<hr />', 3)[2].split('<hr />', 1)[0]}
-                        </div>
-                        
-                        <div class="section-divider"></div>
-                        
-                        <div id="coverup-analysis">
-                            <h2>Coverup Analysis</h2>
-                            {html_content.split('<hr />', 4)[3].split('<hr />', 1)[0]}
-                        </div>
-                    </div>
-                    
-                    <footer>
-                        <p><em>Generated on {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</em></p>
-                        <p>JFKReveal - AI Analysis of Declassified Documents</p>
-                    </footer>
-                </div>
-            </body>
-            </html>""")
-        
+        logger.info("Report generation completed successfully")
         return report

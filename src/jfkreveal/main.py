@@ -11,23 +11,15 @@ from typing import Optional
 # Load environment variables from .env file if it exists
 dotenv.load_dotenv()
 
+from .utils.logger import setup_logging, get_logger
 from .scrapers.archives_gov import ArchivesGovScraper
 from .database.document_processor import DocumentProcessor
 from .database.vector_store import VectorStore
 from .analysis.document_analyzer import DocumentAnalyzer
 from .summarization.findings_report import FindingsReport
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("jfkreveal.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-
-logger = logging.getLogger(__name__)
+# Get the logger for this module
+logger = get_logger("main")
 
 class JFKReveal:
     """Main class for JFK document analysis pipeline."""
@@ -291,7 +283,30 @@ def main():
     parser.add_argument("--ocr-language", type=str, default="eng",
                         help="Language for OCR (default: eng)")
     
+    # Logging-related arguments
+    parser.add_argument("--log-level", type=str, default="INFO",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        help="Logging level (default: INFO)")
+    parser.add_argument("--log-file", type=str, default="jfkreveal.log",
+                        help="Log file path (default: jfkreveal.log)")
+    parser.add_argument("--no-console-log", action="store_true",
+                        help="Disable console logging")
+    
     args = parser.parse_args()
+    
+    # Configure logging with the specified options
+    log_level = getattr(logging, args.log_level)
+    setup_logging(
+        level=log_level,
+        log_file=args.log_file,
+        console=not args.no_console_log
+    )
+    
+    # Log the startup message with level info
+    logger.info(f"JFKReveal starting with log level: {args.log_level}")
+    
+    # Log debug information about arguments
+    logger.debug(f"Command-line arguments: {args}")
     
     # Run pipeline
     jfk_reveal = JFKReveal(
@@ -311,6 +326,7 @@ def main():
         max_workers=args.max_workers
     )
     
+    logger.info(f"Analysis complete! Final report available at: {report_path}")
     print(f"\nAnalysis complete! Final report available at: {report_path}")
 
 
