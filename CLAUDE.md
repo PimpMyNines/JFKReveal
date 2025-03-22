@@ -71,7 +71,7 @@ To publish updates to the GitHub Pages site, follow these steps:
 - ✅ Fixed archives_gov_scraper.py unit tests with improved mocking
 - ✅ Enhanced OCR for historical documents and added comprehensive tests
 - ✅ Fixed test_findings_report_models.py tests with proper LangChain structured output
-- ❌ Integration tests need to be expanded to cover component interactions
+- ✅ Expanded integration tests to cover component interactions
 - ❌ E2E tests need proper handling for API credentials and rate limits
 
 ### What to Do Next
@@ -84,7 +84,7 @@ To publish updates to the GitHub Pages site, follow these steps:
 7. ✅ Fix the failing unit tests in test_findings_report_models.py with proper LangChain structured output
 8. ✅ Document OCR performance characteristics and quality/speed tradeoffs
 9. ✅ Add unit tests for parallel_processor.py and semantic_search.py modules
-10. Expand integration test coverage for key component interactions
+10. ✅ Expand integration test coverage for key component interactions
 11. Add proper mocking for external dependencies in unit tests
 12. Implement test fixtures to reduce code duplication
 13. Add meaningful logging with different levels (DEBUG, INFO, WARNING, ERROR)
@@ -131,6 +131,15 @@ To publish updates to the GitHub Pages site, follow these steps:
   - Added comprehensive OCR unit tests in document_processor.py and text_cleaner.py
   - Implemented tests for custom OCR resolution and language settings
   - Verified integration between DocumentProcessor's OCR and TextCleaner's artifact removal
+  
+- Expanded integration test coverage (2025-03-22):
+  - Added integration test for TextCleaner with DocumentProcessor
+  - Added integration test for SemanticSearchEngine with VectorStore
+  - Added integration test for FindingsReport with analysis data
+  - Added integration test for DocumentAnalyzer with FindingsReport
+  - Implemented end-to-end pipeline test with mocked components
+  - Increased code coverage for FindingsReport to 58%
+  - Increased code coverage for DocumentAnalyzer to 86%
 
 - Created comprehensive OCR performance documentation (2025-03-21):
   - Added detailed OCR_PERFORMANCE.md in docs directory
