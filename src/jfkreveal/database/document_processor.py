@@ -49,6 +49,7 @@ class DocumentProcessor:
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         max_workers: int = 20,  # Default to 20 parallel workers
+        batch_size: int = 50,  # Number of documents to process in a single batch
         skip_existing: bool = True,  # Skip already processed documents by default
         vector_store = None,  # Optional vector store for immediate embedding
         clean_text: bool = True,  # Whether to clean text before chunking
@@ -65,6 +66,7 @@ class DocumentProcessor:
             chunk_size: Target size of text chunks
             chunk_overlap: Overlap between chunks
             max_workers: Maximum number of worker processes (default 20)
+            batch_size: Number of documents to process in a single batch (default 50)
             skip_existing: Whether to skip documents that were already processed
             vector_store: Optional vector store for immediate embedding after processing
             clean_text: Whether to clean text before chunking
@@ -77,6 +79,7 @@ class DocumentProcessor:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.max_workers = max_workers
+        self.batch_size = batch_size
         self.skip_existing = skip_existing
         self.vector_store = vector_store
         self.clean_text = clean_text
@@ -337,17 +340,42 @@ class DocumentProcessor:
                     
         logger.info(f"Found {len(pdf_files)} PDF files to process")
         
-        # Use parallel processing for better performance
-        results = process_documents_parallel(
-            processing_function=self.process_document,
-            document_paths=pdf_files,
-            max_workers=self.max_workers,
-            desc="Processing PDF documents"
-        )
-        
-        # Filter out None results from failed processing
-        processed_files = [path for path in results if path is not None]
+        # Process in batches if needed to manage memory usage
+        if self.batch_size and self.batch_size < len(pdf_files):
+            logger.info(f"Processing documents in batches of {self.batch_size}")
             
+            # Split into batches
+            batches = [pdf_files[i:i + self.batch_size] for i in range(0, len(pdf_files), self.batch_size)]
+            processed_files = []
+            
+            for batch_idx, batch in enumerate(batches):
+                logger.info(f"Processing batch {batch_idx+1}/{len(batches)} ({len(batch)} documents)")
+                
+                # Process this batch in parallel
+                batch_results = process_documents_parallel(
+                    processing_function=self.process_document,
+                    document_paths=batch,
+                    max_workers=self.max_workers,
+                    desc=f"Batch {batch_idx+1}/{len(batches)}"
+                )
+                
+                # Filter out None results from failed processing
+                batch_processed = [path for path in batch_results if path is not None]
+                processed_files.extend(batch_processed)
+                
+                logger.info(f"Completed batch {batch_idx+1}: processed {len(batch_processed)}/{len(batch)} documents")
+        else:
+            # Use parallel processing for better performance (all documents at once)
+            results = process_documents_parallel(
+                processing_function=self.process_document,
+                document_paths=pdf_files,
+                max_workers=self.max_workers,
+                desc="Processing PDF documents"
+            )
+            
+            # Filter out None results from failed processing
+            processed_files = [path for path in results if path is not None]
+        
         logger.info(f"Successfully processed {len(processed_files)}/{len(pdf_files)} files")
         
         return processed_files

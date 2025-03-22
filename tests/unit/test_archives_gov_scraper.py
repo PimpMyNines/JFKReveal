@@ -67,17 +67,16 @@ class TestArchivesGovScraper:
             assert sleep_value == 0.1  # The minimum sleep is enforced as 0.1
 
     @responses.activate
-    def test_fetch_page(self, temp_data_dir):
+    def test_fetch_page(self, temp_data_dir, mock_http_response):
         """Test fetching page with retry capabilities"""
         test_url = "https://www.archives.gov/test"
-        test_content = "<html><body>Test content</body></html>"
         
-        # Add response
+        # Add response using our mock_http_response fixture
         responses.add(
             responses.GET,
             test_url,
-            body=test_content,
-            status=200
+            body=mock_http_response.text,
+            status=mock_http_response.status_code
         )
         
         # Create scraper
@@ -85,8 +84,8 @@ class TestArchivesGovScraper:
         
         # Test successful fetch
         response = scraper._fetch_page(test_url)
-        assert response.status_code == 200
-        assert response.text == test_content
+        assert response.status_code == mock_http_response.status_code
+        assert response.text == mock_http_response.text
         
         # Test retry on failure
         # Reset responses
@@ -102,46 +101,45 @@ class TestArchivesGovScraper:
         responses.add(
             responses.GET,
             test_url,
-            body=test_content,
-            status=200
+            body=mock_http_response.text,
+            status=mock_http_response.status_code
         )
         
-        # Properly mock the backoff decorator to test our retry logic
-        # First create a mock function that will replace the backoff.on_exception decorator
-        def mock_backoff_decorator(f):
-            # This wrapper will manually implement the retry logic for testing
-            def wrapper(*args, **kwargs):
-                # Simulate first attempt failing, second succeeding
-                scraper.session.get = MagicMock()
-                
-                # Create mock responses
-                mock_response1 = MagicMock()
-                mock_response1.status_code = 429
-                mock_response1.raise_for_status.side_effect = requests.HTTPError("Rate limited")
-                
-                mock_response2 = MagicMock()
-                mock_response2.status_code = 200
-                mock_response2.text = test_content
-                
-                scraper.session.get.side_effect = [mock_response1, mock_response2]
-                
-                # First call will raise an exception
-                try:
-                    return f(*args, **kwargs)
-                except requests.HTTPError:
-                    # On exception, we'll simulate what backoff would do - retry
-                    # Reset the mock to return success on the next call
-                    scraper.session.get.side_effect = [mock_response2]
-                    # Second attempt should succeed
-                    return f(*args, **kwargs)
-            return wrapper
-        
-        # Apply our mock decorator to the _fetch_page method
-        with patch.object(scraper, '_fetch_page', mock_backoff_decorator(scraper._fetch_page)):
+        # Use our mock_retry fixture approach with the backoff decorator
+        with patch('backoff.on_exception') as mock_backoff:
+            # This wrapper function will call the original function after setting up
+            # the appropriate mocks to simulate a retry scenario
+            def side_effect(*args, **kwargs):
+                def decorator(func):
+                    def wrapper(*func_args, **func_kwargs):
+                        # Create mock session with failing then succeeding responses
+                        scraper.session = MagicMock()
+                        
+                        # Mock response for first attempt (failure)
+                        error_response = MagicMock()
+                        error_response.status_code = 429
+                        error_response.raise_for_status.side_effect = requests.HTTPError("Rate limited")
+                        
+                        # Second attempt should succeed
+                        scraper.session.get.side_effect = [error_response, mock_http_response]
+                        
+                        # First call will raise, handled by our backoff
+                        try:
+                            return func(*func_args, **func_kwargs)
+                        except requests.HTTPError:
+                            # Reset the mock for the retry
+                            scraper.session.get.side_effect = [mock_http_response]
+                            return func(*func_args, **func_kwargs)
+                    return wrapper
+                return decorator
+            
+            # Set up our mock to use the side effect
+            mock_backoff.side_effect = side_effect
+            
             # This should now succeed after a simulated retry
             response = scraper._fetch_page(test_url)
-            assert response.status_code == 200
-            assert response.text == test_content
+            assert response.status_code == mock_http_response.status_code
+            assert response.text == mock_http_response.text
 
     def test_extract_links(self, temp_data_dir):
         """Test extracting PDF links from pages"""
@@ -224,48 +222,41 @@ class TestArchivesGovScraper:
                 assert result == case["expected"]
 
     @patch('requests.Session.get')
-    def test_download_file(self, mock_get, temp_data_dir):
+    def test_download_file(self, mock_get, temp_data_dir, mock_pdf_response):
         """Test downloading file with retry capabilities"""
         url = "https://www.archives.gov/files/test-document.pdf"
         output_path = os.path.join(temp_data_dir["raw"], "test-document.pdf")
         
-        # Mock response with binary content
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.content = b'%PDF-1.5\nTest PDF content'
-        mock_response.headers = {'Content-Length': '25'}
-        # Make sure iter_content returns chunks as the real implementation would
-        mock_response.iter_content.return_value = [mock_response.content]
-        mock_get.return_value = mock_response
+        # Use our mock_pdf_response fixture
+        mock_get.return_value = mock_pdf_response
         
         # Create scraper
         scraper = ArchivesGovScraper(output_dir=temp_data_dir["raw"])
         
         # Mock open to avoid actual file writing
         with patch('builtins.open', mock_open()) as mock_file:
-            # Mock os.path.getsize to return a non-zero file size
-            with patch('os.path.getsize', return_value=25):
-                # Mock tqdm completely - this is critical
+            # Mock os.path.getsize to return a non-zero file size matching our mock response
+            with patch('os.path.getsize', return_value=len(mock_pdf_response.content)):
+                # Mock tqdm progress bar
                 with patch('tqdm.tqdm') as mock_tqdm:
-                    # Create a proper context manager mock
-                    context_manager_mock = MagicMock()
-                    mock_tqdm.return_value = context_manager_mock
-                    mock_bar = MagicMock()
-                    context_manager_mock.__enter__ = MagicMock(return_value=mock_bar)
-                    context_manager_mock.__exit__ = MagicMock(return_value=None)
+                    # Create a proper context manager mock for tqdm
+                    mock_tqdm.return_value.__enter__ = MagicMock(
+                        return_value=MagicMock()  # The progress bar instance
+                    )
+                    mock_tqdm.return_value.__exit__ = MagicMock(return_value=None)
                     
                     # Test successful download
                     result = scraper._download_file(url, output_path)
                     
-                    # Verify get was called with correct URL
+                    # Verify get was called with correct URL and parameters
                     mock_get.assert_called_once_with(url, stream=True, timeout=ANY)
                     
                     # Verify file was opened for writing
                     mock_file.assert_called_once_with(output_path, 'wb')
                     
-                    # Verify content was written to file
+                    # Verify content was written to file - get the first chunk from iter_content
                     file_handle = mock_file.return_value.__enter__.return_value
-                    file_handle.write.assert_called_once_with(mock_response.content)
+                    file_handle.write.assert_called_once_with(mock_pdf_response.content)
                     
                     # Verify function returned True for successful download
                     assert result is True
@@ -308,7 +299,8 @@ class TestArchivesGovScraper:
         # Test failed download
         mock_download_file.reset_mock()
         with patch('os.path.exists', return_value=False):
-            mock_download_file.side_effect = requests.HTTPError("404 Not Found")
+            # Use return_value=False instead of side_effect to avoid raising an exception
+            mock_download_file.return_value = False
             result = scraper.download_pdf(url)
             
             # Verify result is None for failed download
@@ -319,15 +311,25 @@ class TestArchivesGovScraper:
             
         # Test cleanup of failed download - separate test case
         mock_download_file.reset_mock()
-        mock_download_file.side_effect = requests.HTTPError("404 Not Found")
+        
+        # Mock the exception using a try/except handler to properly handle cleanup
+        def download_side_effect(*args, **kwargs):
+            # Create temporary file to test cleanup
+            with open(output_path, 'w') as f:
+                f.write("test")
+            raise requests.HTTPError("404 Not Found")
+            
+        mock_download_file.side_effect = download_side_effect
         
         # Mock that file exists and is a file
-        with patch('os.path.exists', side_effect=[False, True]):
+        with patch('os.path.exists', side_effect=[False, True, True]):
             with patch('os.path.isfile', return_value=True):
                 with patch('os.remove') as mock_remove:
                     result = scraper.download_pdf(url)
-                    # Since we're mocking os.path.exists to return True for the second call
-                    # (after the exception), the cleanup should be triggered
+                    # Verify result is None for failed download
+                    assert result is None
+                    # Since we're mocking os.path.exists to return True after the exception,
+                    # the cleanup should be triggered
                     assert mock_remove.called, "File removal should have been attempted"  
                     mock_remove.assert_called_with(output_path)
         

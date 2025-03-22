@@ -52,7 +52,7 @@ class VectorStore:
             if embedding_provider == "ollama":
                 embedding_model = os.environ.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
             else:
-                embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+                embedding_model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         
         # Get Ollama base URL
         if ollama_base_url is None:

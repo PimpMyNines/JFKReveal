@@ -4,6 +4,7 @@ Generate comprehensive findings report from document analyses.
 import os
 import json
 import datetime
+import logging
 from typing import List, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, ConfigDict

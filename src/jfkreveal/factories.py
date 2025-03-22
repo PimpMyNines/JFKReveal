@@ -460,12 +460,29 @@ def create_document_scraper(
     Returns:
         A document scraper instance
     """
-    return ArchivesGovScraper(
-        output_dir=output_dir,
-        max_documents=max_documents,
-        num_workers=num_workers,
-        document_types=document_types
+    # Create a config for the scraper
+    from jfkreveal.scrapers.archives_gov import ScraperConfig
+    config = ScraperConfig(
+        delay=1.0,
+        max_retries=5,
+        backoff_factor=0.5,
+        jitter=0.25,
+        timeout=30
     )
+    
+    # ArchivesGovScraper only accepts output_dir and config parameters
+    scraper = ArchivesGovScraper(
+        output_dir=output_dir,
+        config=config
+    )
+    
+    # Store additional parameters as instance variables
+    # that might be used by the implementation
+    scraper.max_documents = max_documents
+    scraper.num_workers = num_workers
+    scraper.document_types = document_types
+    
+    return scraper
 
 
 def create_document_analyzer(

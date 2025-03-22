@@ -50,6 +50,7 @@ class ArchivesGovScraper:
         """
         self.output_dir = output_dir
         self.config = config or ScraperConfig()
+        self.use_cache = True  # Default to using cache
         os.makedirs(output_dir, exist_ok=True)
         
         # Configure session with retry, backoff, and jitter
@@ -212,6 +213,24 @@ class ArchivesGovScraper:
             os.remove(output_path)
             return False
             
+    def set_retry_config(self, max_retries: int, retry_delay: int, backoff_factor: float):
+        """
+        Update retry configuration.
+        
+        Args:
+            max_retries: Maximum number of retries for failed operations
+            retry_delay: Base delay between retries in seconds
+            backoff_factor: Exponential backoff factor for retries
+        """
+        # Update config
+        self.config.max_retries = max_retries
+        self.config.delay = retry_delay
+        self.config.backoff_factor = backoff_factor
+        
+        # Recreate session with new settings
+        self.session = self._create_session()
+        logger.info(f"Updated retry configuration: max_retries={max_retries}, delay={retry_delay}s, backoff_factor={backoff_factor}")
+    
     def download_pdf(self, url):
         """
         Download a PDF from the given URL with retry capabilities.
@@ -226,11 +245,14 @@ class ArchivesGovScraper:
         output_path = os.path.join(self.output_dir, document.filename)
         document.local_path = output_path
         
-        # Skip if file already exists
-        if os.path.exists(output_path):
-            logger.info(f"File already exists: {output_path}")
+        # Skip if file already exists and using cache
+        if os.path.exists(output_path) and self.use_cache:
+            logger.info(f"File already exists (cache enabled): {output_path}")
             document.downloaded = True
             return output_path
+        elif os.path.exists(output_path) and not self.use_cache:
+            logger.info(f"File exists but cache disabled, re-downloading: {output_path}")
+            os.remove(output_path)  # Remove existing file to force re-download
         
         try:
             success = self._download_file(url, output_path)
@@ -254,43 +276,49 @@ class ArchivesGovScraper:
         Scrape all PDF documents from the National Archives JFK Release site.
         
         Returns:
-            tuple: (list of downloaded file paths, list of PDFDocument objects)
+            list: List of downloaded file paths
         """
         pdf_links = self.extract_links()
         logger.info(f"Found {len(pdf_links)} PDF documents")
         
-        # Filter out URLs where the file already exists
+        # Filter out URLs where the file already exists if using cache
         filtered_links = []
         existing_files = []
         
         for url in pdf_links:
             filename = self._sanitize_filename(url)
             output_path = os.path.join(self.output_dir, filename)
-            if os.path.exists(output_path):
-                logger.info(f"Skipping {url} - file already exists at {output_path}")
+            if os.path.exists(output_path) and self.use_cache:
+                logger.info(f"Skipping {url} - file already exists at {output_path} (cache enabled)")
                 existing_files.append(output_path)
             else:
+                if os.path.exists(output_path) and not self.use_cache:
+                    logger.info(f"File exists but cache disabled, queuing for re-download: {output_path}")
                 filtered_links.append(url)
         
-        logger.info(f"After filtering existing files: {len(filtered_links)} PDFs need to be downloaded, {len(existing_files)} already exist")
+        if self.use_cache:
+            logger.info(f"After filtering existing files: {len(filtered_links)} PDFs need to be downloaded, {len(existing_files)} already exist")
+        else:
+            logger.info(f"Cache disabled: downloading all {len(filtered_links)} PDFs, ignoring {len(existing_files)} existing files")
         
         downloaded_files = []
         documents = []
         
-        # Add existing files to documents list
-        for output_path in existing_files:
-            filename = os.path.basename(output_path)
-            # Use BASE_URL for more accurate URL reconstruction
-            url = f"{self.BASE_URL}/{filename}"
-            document = PDFDocument(
-                url=url,
-                filename=filename,
-                local_path=output_path,
-                downloaded=True,
-                error=None
-            )
-            documents.append(document)
-            downloaded_files.append(output_path)
+        # Add existing files to documents list if using cache
+        if self.use_cache:
+            for output_path in existing_files:
+                filename = os.path.basename(output_path)
+                # Use BASE_URL for more accurate URL reconstruction
+                url = f"{self.BASE_URL}/{filename}"
+                document = PDFDocument(
+                    url=url,
+                    filename=filename,
+                    local_path=output_path,
+                    downloaded=True,
+                    error=None
+                )
+                documents.append(document)
+                downloaded_files.append(output_path)
         
         for url in tqdm(filtered_links, desc="Downloading PDFs"):
             file_path = self.download_pdf(url)
@@ -311,5 +339,9 @@ class ArchivesGovScraper:
             # Respect the site by adding a delay with jitter between requests
             self._sleep_with_jitter()
             
-        logger.info(f"Downloaded {len(downloaded_files) - len(existing_files)} new files, {len(existing_files)} already existed, total: {len(downloaded_files)} files in {self.output_dir}")
+        if self.use_cache:
+            logger.info(f"Downloaded {len(downloaded_files) - len(existing_files)} new files, {len(existing_files)} already existed, total: {len(downloaded_files)} files in {self.output_dir}")
+        else:
+            logger.info(f"Downloaded {len(downloaded_files)} files to {self.output_dir} (cache disabled)")
+            
         return downloaded_files, documents

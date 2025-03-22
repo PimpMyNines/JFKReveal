@@ -18,6 +18,22 @@ DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_CONSOLE_FORMAT = "%(levelname)s - %(message)s"
 DEFAULT_LOG_LEVEL = logging.INFO
 
+# Format type configurations
+LOG_FORMATS = {
+    "standard": {
+        "file": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "console": "%(levelname)s - %(message)s"
+    },
+    "detailed": {
+        "file": "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+        "console": "%(asctime)s - %(levelname)s - %(message)s"
+    },
+    "minimal": {
+        "file": "%(asctime)s: %(message)s",
+        "console": "%(message)s"
+    }
+}
+
 # Global configuration
 config = {
     "initialized": False,
@@ -34,7 +50,8 @@ def setup_logging(
     console: bool = True,
     file_format: str = DEFAULT_LOG_FORMAT,
     console_format: str = DEFAULT_CONSOLE_FORMAT,
-    module_levels: Optional[Dict[str, int]] = None
+    module_levels: Optional[Dict[str, int]] = None,
+    format_type: str = "standard"
 ) -> logging.Logger:
     """
     Configure logging for the JFKReveal package.
@@ -46,6 +63,7 @@ def setup_logging(
         file_format: Format for file logging
         console_format: Format for console logging
         module_levels: Dict mapping module names to specific log levels
+        format_type: Predefined format type (standard, detailed, minimal)
         
     Returns:
         Configured root logger
@@ -62,6 +80,11 @@ def setup_logging(
     logger.setLevel(level)
     logger.handlers = []  # Remove any existing handlers
     
+    # Get format definitions based on format_type if specified
+    if format_type in LOG_FORMATS:
+        file_format = LOG_FORMATS[format_type]["file"]
+        console_format = LOG_FORMATS[format_type]["console"]
+
     # Create formatters
     file_formatter = logging.Formatter(file_format)
     console_formatter = logging.Formatter(console_format)
