@@ -40,18 +40,26 @@ class SemanticSearchEngine:
         # Set up reranking if specified
         self.reranker = None
         if reranker_model:
-            try:
-                from sentence_transformers import CrossEncoder
-                self.reranker = CrossEncoder(reranker_model)
-                logger.info(f"Initialized reranker with model: {reranker_model}")
-            except ImportError:
-                logger.warning("sentence-transformers not installed. Reranking disabled.")
-            except Exception as e:
-                logger.warning(f"Failed to load reranker model: {e}")
-        
-        # Index documents if provided
-        if documents:
-            self.index_documents(documents)
+            self.reranker = self._setup_reranker(reranker_model)
+    
+    def _setup_reranker(self, model_name: str):
+        """Helper method to set up reranker model for easier testing."""
+        try:
+            from sentence_transformers import CrossEncoder
+            reranker = CrossEncoder(model_name)
+            logger.info(f"Initialized reranker with model: {model_name}")
+            return reranker
+        except ImportError:
+            logger.warning("sentence-transformers not installed. Reranking disabled.")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to load reranker model: {e}")
+            return None
+            
+    # Index documents if provided
+    def __post_init__(self):
+        if hasattr(self, 'documents') and self.documents:
+            self.index_documents(self.documents)
     
     def index_documents(self, documents: List[Dict[str, Any]]) -> None:
         """
