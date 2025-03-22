@@ -98,8 +98,8 @@ class TestFindingsReportModels:
             "evidence_strength": "The evidence is strong and convincing.",
             "case_weaknesses": ["Weakness 1", "Weakness 2"],
             "alternative_suspects": [
-                {"name": "Suspect A", "evidence": ["Evidence X"]},
-                {"name": "Suspect B", "evidence": ["Evidence Y"]}
+                {"name": "Suspect A", "evidence": ["Evidence X"], "credibility": "High"},
+                {"name": "Suspect B", "evidence": ["Evidence Y"], "credibility": "Medium"}
             ],
             "collaborations": ["Collaboration 1", "Collaboration 2"],
             "government_involvement": "Government was involved in these ways...",
@@ -115,7 +115,7 @@ class TestFindingsReportModels:
         minimal_data = {
             "supporting_evidence": {"Culprit 1": ["Evidence A"]},
             "evidence_strength": "The evidence is strong.",
-            "alternative_suspects": [{"name": "Suspect A", "evidence": ["Evidence X"]}],
+            "alternative_suspects": [{"name": "Suspect A", "evidence": ["Evidence X"], "credibility": "Medium"}],
             "government_involvement": "Government involvement analysis",
             "conspiracy_analysis": "Conspiracy analysis"
         }
@@ -159,6 +159,22 @@ class TestFindingsReportModels:
 
 class TestLangChainIntegration:
     """Test FindingsReport LangChain integration"""
+
+    @pytest.fixture
+    def temp_data_dir(self, tmp_path):
+        """Create a temporary directory structure for testing"""
+        # Create directory structure
+        analysis_dir = tmp_path / "analysis"
+        reports_dir = tmp_path / "reports"
+        analysis_dir.mkdir()
+        reports_dir.mkdir()
+        
+        # Return paths for use in tests
+        return {
+            "root": str(tmp_path),
+            "analysis": str(analysis_dir),
+            "reports": str(reports_dir)
+        }
 
     @patch('langchain_openai.ChatOpenAI')
     def test_executive_summary_langchain_integration(self, mock_chat_openai, temp_data_dir):
