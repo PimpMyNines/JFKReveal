@@ -168,7 +168,7 @@ To publish updates to the GitHub Pages site, follow these steps:
 
 ### Future Enhancements
 1. ✅ Improve CLI interface (2025-03-23): Enhanced with subcommands, progress bars, color output, and better documentation
-2. Clean up code duplication
+2. ✅ Clean up code duplication (2025-03-25): Created file_utils.py to centralize file operations
 3. Update documentation
 4. Add more pipeline control options
 
@@ -181,6 +181,13 @@ To publish updates to the GitHub Pages site, follow these steps:
 5. **Mark completed items**: ❌ → ✅ with dated entries after validating updates
 
 ## Progress Update
+- Refactored duplicated file operations (2025-03-25):
+  - Created utils/file_utils.py module to centralize common file operations
+  - Refactored document_processor.py to use the new file_utils module
+  - Added comprehensive utility functions for file handling
+  - Created refactoring_guidelines.py with detailed plans for further refactoring
+  - Added code structure and refactoring section to the README
+
 - Fixed the failing tests in test_findings_report_models.py:
   - Added extra field handling in Pydantic models using `extra="ignore"` in model config
   - Updated to modern Pydantic v2 ConfigDict approach to remove deprecation warnings

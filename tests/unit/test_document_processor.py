@@ -51,7 +51,8 @@ class TestDocumentProcessor:
         assert processor.vector_store is not None
 
     @patch('fitz.open')
-    def test_extract_text_from_pdf(self, mock_fitz_open, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_document_id')
+    def test_extract_text_from_pdf(self, mock_get_document_id, mock_fitz_open, temp_data_dir):
         """Test extracting text from PDF"""
         # Setup mock PDF document
         mock_doc = MagicMock()
@@ -74,8 +75,9 @@ class TestDocumentProcessor:
         mock_doc.__len__.return_value = 2
         mock_doc.__iter__.return_value = iter([mock_page1, mock_page2])
         
-        # Configure mock to return our mock document
+        # Configure mocks to return our mock values
         mock_fitz_open.return_value = mock_doc
+        mock_get_document_id.return_value = "test_document_id"
         
         # Create processor with clean_text=False to test raw text extraction
         processor = DocumentProcessor(
@@ -104,11 +106,12 @@ class TestDocumentProcessor:
         assert metadata["producer"] == "Test Producer"
         assert metadata["creation_date"] == "2023-01-01"
         assert metadata["modification_date"] == "2023-01-02"
-        assert "document_id" in metadata
+        assert metadata["document_id"] == "test_document_id"
 
     @patch('fitz.open')
     @patch('jfkreveal.database.document_processor.clean_pdf_text')
-    def test_extract_text_from_pdf_with_cleaning(self, mock_clean_pdf, mock_fitz_open, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_document_id')
+    def test_extract_text_from_pdf_with_cleaning(self, mock_get_document_id, mock_clean_pdf, mock_fitz_open, temp_data_dir):
         """Test extracting text from PDF with cleaning"""
         # Setup mock PDF document
         mock_doc = MagicMock()
@@ -123,6 +126,7 @@ class TestDocumentProcessor:
         # Configure mocks
         mock_fitz_open.return_value = mock_doc
         mock_clean_pdf.return_value = "Cleaned page content"
+        mock_get_document_id.return_value = "test_document_id"
         
         # Create processor with clean_text=True
         processor = DocumentProcessor(
@@ -143,6 +147,7 @@ class TestDocumentProcessor:
         
         # Verify cleaned flag in metadata
         assert metadata["cleaned"] is True
+        assert metadata["document_id"] == "test_document_id"
 
     @patch('fitz.open')
     def test_extract_text_from_pdf_error(self, mock_fitz_open, temp_data_dir):
@@ -261,7 +266,8 @@ class TestDocumentProcessor:
 
     @patch('jfkreveal.database.document_processor.DocumentProcessor.extract_text_from_pdf')
     @patch('jfkreveal.database.document_processor.DocumentProcessor.chunk_document')
-    def test_process_document(self, mock_chunk_document, mock_extract_text, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_output_path')
+    def test_process_document(self, mock_get_output_path, mock_chunk_document, mock_extract_text, temp_data_dir):
         """Test processing a single document"""
         # Setup mocks
         mock_extract_text.return_value = ("Document text", {"filename": "test.pdf", "document_id": "test123"})
@@ -275,6 +281,10 @@ class TestDocumentProcessor:
                 "metadata": {"document_id": "test123", "chunk_id": "test123-1"}
             }
         ]
+        
+        # Set up the output path
+        expected_output_path = os.path.join(temp_data_dir["processed"], "test.json")
+        mock_get_output_path.return_value = expected_output_path
         
         # Create processor
         processor = DocumentProcessor(
@@ -294,18 +304,23 @@ class TestDocumentProcessor:
         mock_extract_text.assert_called_once_with(pdf_path)
         mock_chunk_document.assert_called_once()
         
+        # Verify get_output_path was called correctly
+        mock_get_output_path.assert_called_once_with(pdf_path, temp_data_dir["processed"], "json")
+        
         # Verify file was opened for writing
-        expected_output_path = os.path.join(temp_data_dir["processed"], "test.json")
         m.assert_called_once_with(expected_output_path, 'w', encoding='utf-8')
         
         # Verify result is the output path
         assert result == expected_output_path
 
     @patch('os.path.exists')
-    def test_process_document_skip_existing(self, mock_exists, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_output_path')
+    def test_process_document_skip_existing(self, mock_get_output_path, mock_exists, temp_data_dir):
         """Test skipping already processed documents"""
-        # Configure mock to indicate file exists
+        # Configure mocks
         mock_exists.return_value = True
+        expected_output_path = os.path.join(temp_data_dir["processed"], "test.json")
+        mock_get_output_path.return_value = expected_output_path
         
         # Create processor with skip_existing=True
         processor = DocumentProcessor(
@@ -318,8 +333,10 @@ class TestDocumentProcessor:
         pdf_path = os.path.join(temp_data_dir["raw"], "test.pdf")
         result = processor.process_document(pdf_path)
         
+        # Verify get_output_path was called correctly
+        mock_get_output_path.assert_called_once_with(pdf_path, temp_data_dir["processed"], "json")
+        
         # Verify exists was called with correct path
-        expected_output_path = os.path.join(temp_data_dir["processed"], "test.json")
         mock_exists.assert_called_with(expected_output_path)
         
         # Verify result is the existing output path
@@ -345,8 +362,8 @@ class TestDocumentProcessor:
         assert result is None
 
     @patch('jfkreveal.database.document_processor.DocumentProcessor.process_document')
-    @patch('os.walk')
-    def test_process_all_documents(self, mock_os_walk, mock_process_document, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.list_pdf_files')
+    def test_process_all_documents(self, mock_list_pdf_files, mock_process_document, temp_data_dir):
         """Test processing all documents in parallel"""
         # Setup test PDF files
         pdf_paths = [
@@ -365,8 +382,8 @@ class TestDocumentProcessor:
             os.path.join(temp_data_dir["processed"], "doc3.json")
         ]
         
-        # Set up mock for os.walk to return our test files
-        mock_os_walk.return_value = [(temp_data_dir["raw"], [], ["doc1.pdf", "doc2.pdf", "doc3.pdf"])]
+        # Set up mock for list_pdf_files to return our test files
+        mock_list_pdf_files.return_value = pdf_paths
         
         # Configure the mock to return our expected results
         mock_process_document.side_effect = [
@@ -385,13 +402,17 @@ class TestDocumentProcessor:
         # Use sequential processing for testing to avoid multiprocessing issues
         results = processor.process_all_documents_sequential()
         
+        # Verify list_pdf_files was called correctly
+        mock_list_pdf_files.assert_called_once_with(temp_data_dir["raw"], recursive=True)
+        
         # Verify process_document was called for each PDF
         assert mock_process_document.call_count == 3
         
         # Verify results match expected
         assert results == expected_results
 
-    def test_check_if_embedded(self, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.check_if_embedded')
+    def test_check_if_embedded(self, mock_check_if_embedded, temp_data_dir):
         """Test checking if a document has been embedded"""
         # Create a test file
         file_path = os.path.join(temp_data_dir["processed"], "test.json")
@@ -402,17 +423,20 @@ class TestDocumentProcessor:
             output_dir=temp_data_dir["processed"]
         )
         
-        # Test when marker file doesn't exist
-        with patch('os.path.exists', return_value=False):
-            result = processor.check_if_embedded(file_path)
-            assert result is False
+        # Test when document is not embedded
+        mock_check_if_embedded.return_value = False
+        result = processor.check_if_embedded(file_path)
+        assert result is False
+        mock_check_if_embedded.assert_called_with(file_path)
         
-        # Test when marker file exists
-        with patch('os.path.exists', return_value=True):
-            result = processor.check_if_embedded(file_path)
-            assert result is True
+        # Test when document is embedded
+        mock_check_if_embedded.return_value = True
+        result = processor.check_if_embedded(file_path)
+        assert result is True
+        mock_check_if_embedded.assert_called_with(file_path)
 
-    def test_mark_as_embedded(self, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.mark_as_embedded')
+    def test_mark_as_embedded(self, mock_mark_as_embedded, temp_data_dir):
         """Test marking a document as embedded"""
         # Create a test file path
         file_path = os.path.join(temp_data_dir["processed"], "test.json")
@@ -424,19 +448,13 @@ class TestDocumentProcessor:
         )
         
         # Test marking a file
-        m = mock_open()
-        with patch('builtins.open', m):
-            processor.mark_as_embedded(file_path)
+        processor.mark_as_embedded(file_path)
         
-        # Verify marker file was created
-        marker_path = f"{file_path}.embedded"
-        m.assert_called_once_with(marker_path, 'w')
-        
-        # Verify correct content was written
-        handle = m()
-        handle.write.assert_called_once_with("1")
+        # Verify mark_as_embedded was called
+        mock_mark_as_embedded.assert_called_once_with(file_path)
 
-    def test_get_processed_documents(self, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.list_json_files')
+    def test_get_processed_documents(self, mock_list_json_files, temp_data_dir):
         """Test getting list of processed documents"""
         # Create processor
         processor = DocumentProcessor(
@@ -444,28 +462,30 @@ class TestDocumentProcessor:
             output_dir=temp_data_dir["processed"]
         )
         
-        # Create some test JSON files
+        # Create test JSON paths
         json_paths = [
             os.path.join(temp_data_dir["processed"], "doc1.json"),
             os.path.join(temp_data_dir["processed"], "doc2.json")
         ]
-        for path in json_paths:
-            with open(path, 'w') as f:
-                f.write('{"test": "data"}')
+        
+        # Configure the mock
+        mock_list_json_files.return_value = json_paths
         
         # Call the method
         results = processor.get_processed_documents()
         
-        # Verify results contain all JSON files
-        assert len(results) == 2
-        for path in json_paths:
-            assert path in results
+        # Verify list_json_files was called correctly
+        mock_list_json_files.assert_called_once_with(temp_data_dir["processed"], recursive=True)
+        
+        # Verify results
+        assert results == json_paths
             
     @patch('fitz.open')
     @patch('jfkreveal.database.document_processor.OCR_AVAILABLE', True)
     @patch('jfkreveal.database.document_processor.pytesseract')
     @patch('jfkreveal.database.document_processor.Image')
-    def test_ocr_functionality(self, mock_image, mock_pytesseract, mock_fitz_open, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_document_id')
+    def test_ocr_functionality(self, mock_get_document_id, mock_image, mock_pytesseract, mock_fitz_open, temp_data_dir):
         """Test OCR functionality for scanned PDFs"""
         # Setup mock PDF document
         mock_doc = MagicMock()
@@ -483,6 +503,7 @@ class TestDocumentProcessor:
         # Configure mocks
         mock_doc.__iter__.return_value = iter([mock_page1, mock_page2])
         mock_fitz_open.return_value = mock_doc
+        mock_get_document_id.return_value = "test_document_id"
         
         # Setup mock OCR process
         mock_pixmap = MagicMock()
@@ -521,12 +542,14 @@ class TestDocumentProcessor:
         assert metadata["ocr_applied"] is True
         assert metadata["ocr_pages"] == 1
         assert metadata["ocr_percentage"] == 50.0  # 1 out of 2 pages needed OCR
+        assert metadata["document_id"] == "test_document_id"
         
     @patch('fitz.open')
     @patch('jfkreveal.database.document_processor.OCR_AVAILABLE', True)
     @patch('jfkreveal.database.document_processor.pytesseract')
     @patch('jfkreveal.database.document_processor.Image')
-    def test_ocr_with_custom_settings(self, mock_image, mock_pytesseract, mock_fitz_open, temp_data_dir):
+    @patch('jfkreveal.utils.file_utils.get_document_id')
+    def test_ocr_with_custom_settings(self, mock_get_document_id, mock_image, mock_pytesseract, mock_fitz_open, temp_data_dir):
         """Test OCR functionality with custom resolution and language settings"""
         # Setup mock PDF document and page
         mock_doc = MagicMock()
@@ -537,6 +560,7 @@ class TestDocumentProcessor:
         mock_doc.__len__.return_value = 1
         mock_doc.__iter__.return_value = iter([mock_page])
         mock_fitz_open.return_value = mock_doc
+        mock_get_document_id.return_value = "test_document_id"
         
         # Setup pixmap and OCR
         mock_pixmap = MagicMock()
@@ -579,4 +603,5 @@ class TestDocumentProcessor:
         
         # Verify text and metadata
         assert "German OCR text" in text
-        assert metadata["ocr_applied"] is True 
+        assert metadata["ocr_applied"] is True
+        assert metadata["document_id"] == "test_document_id" 

@@ -253,6 +253,26 @@ For more detailed documentation:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 🛠️ Code Structure and Refactoring
+
+The project codebase follows modern software engineering practices:
+
+### Modular Design
+- Each component is isolated with well-defined interfaces
+- Dependencies are explicitly injected for better testability
+- Shared utilities centralized to avoid code duplication
+
+### Recent Improvements
+- **Code Duplication Reduction**: Extracted common file operations into `file_utils.py`
+- **Dependency Injection**: Implemented a lightweight DI container
+- **Error Handling**: Enhanced error hierarchy with specific exception types
+- **CLI Interface**: Modern command-line interface with subcommands
+
+### Upcoming Refactoring
+- **Template Management**: Moving HTML templates to dedicated directory
+- **Prompt Management**: Centralizing LLM prompts
+- **Progress Tracking**: Unified progress tracking system
+
 ## ⚠️ Disclaimer
 
 This tool is designed for educational and research purposes only. The analysis presents evidence-based conclusions but should not be considered definitive. All findings should be critically evaluated alongside other historical research.
