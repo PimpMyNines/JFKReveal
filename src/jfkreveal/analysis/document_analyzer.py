@@ -85,7 +85,7 @@ class DocumentAnalyzer:
         self,
         vector_store: VectorStore,
         output_dir: str = "data/analysis",
-        model_name: str = "gpt-4o",
+        model_name: str = "gpt-4o",  # Using gpt-4o as default model
         openai_api_key: Optional[str] = None,
         temperature: float = 0.0,
         max_retries: int = 5,
@@ -323,7 +323,7 @@ You must adhere to these non-negotiable guidelines:
             # Create error topic analysis
             topic_analysis = TopicAnalysis(
                 topic=topic,
-                summary=TopicSummary(),
+                summary=TopicSummary(credibility="low"),  # Initialize with required field
                 document_analyses=analyzed_docs,
                 num_documents=len(analyzed_docs),
                 error=str(e)

@@ -37,6 +37,9 @@ class JFKReveal:
         base_dir: str = ".",
         openai_api_key: Optional[str] = None,
         clean_text: bool = True,
+        use_ocr: bool = True,
+        ocr_resolution_scale: float = 2.0,
+        ocr_language: str = "eng",
     ):
         """
         Initialize the JFK document analysis pipeline.
@@ -45,10 +48,16 @@ class JFKReveal:
             base_dir: Base directory for data
             openai_api_key: OpenAI API key (uses environment variable if not provided)
             clean_text: Whether to clean OCR text before chunking and embedding
+            use_ocr: Whether to apply OCR to scanned pages with no text
+            ocr_resolution_scale: Scale factor for OCR resolution (higher = better quality)
+            ocr_language: Language for OCR processing
         """
         self.base_dir = base_dir
         self.openai_api_key = openai_api_key
         self.clean_text = clean_text
+        self.use_ocr = use_ocr
+        self.ocr_resolution_scale = ocr_resolution_scale
+        self.ocr_language = ocr_language
         
         # Create data directories
         os.makedirs(os.path.join(base_dir, "data/raw"), exist_ok=True)
@@ -87,7 +96,10 @@ class JFKReveal:
             max_workers=max_workers,
             skip_existing=skip_existing,
             vector_store=vector_store,
-            clean_text=self.clean_text
+            clean_text=self.clean_text,
+            use_ocr=self.use_ocr,
+            ocr_resolution_scale=self.ocr_resolution_scale,
+            ocr_language=self.ocr_language
         )
         
         processed_files = processor.process_all_documents()
@@ -147,7 +159,7 @@ class JFKReveal:
         logger.info("Starting document analysis")
         
         # Get model name from environment variables if set
-        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+        model_name = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")  # Using gpt-4o as default
         
         analyzer = DocumentAnalyzer(
             vector_store=vector_store,
@@ -271,13 +283,24 @@ def main():
     parser.add_argument("--no-clean-text", action="store_true",
                         help="Disable text cleaning for OCR documents")
     
+    # OCR-related arguments
+    parser.add_argument("--no-ocr", action="store_true",
+                        help="Disable OCR for scanned documents")
+    parser.add_argument("--ocr-resolution", type=float, default=2.0,
+                        help="OCR resolution scale factor (higher = better quality but slower, default: 2.0)")
+    parser.add_argument("--ocr-language", type=str, default="eng",
+                        help="Language for OCR (default: eng)")
+    
     args = parser.parse_args()
     
     # Run pipeline
     jfk_reveal = JFKReveal(
         base_dir=args.base_dir,
         openai_api_key=args.openai_api_key,
-        clean_text=not args.no_clean_text
+        clean_text=not args.no_clean_text,
+        use_ocr=not args.no_ocr,
+        ocr_resolution_scale=args.ocr_resolution,
+        ocr_language=args.ocr_language
     )
     
     report_path = jfk_reveal.run_pipeline(

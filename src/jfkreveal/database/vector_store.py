@@ -100,19 +100,37 @@ class VectorStore:
             with open(file_path, 'r', encoding='utf-8') as f:
                 chunks = json.load(f)
                 
+            # Handle case where chunks might not be in the expected format
+            if not isinstance(chunks, list):
+                logger.warning(f"Invalid chunks format in {file_path}: expected list but got {type(chunks)}")
+                return 0
+                
             texts = []
             metadatas = []
             ids = []
             
-            for chunk in chunks:
+            for chunk_idx, chunk in enumerate(chunks):
+                # Validate chunk has required fields
+                if not isinstance(chunk, dict) or 'text' not in chunk or 'metadata' not in chunk:
+                    logger.warning(f"Invalid chunk format at index {chunk_idx} in {file_path}")
+                    continue
+                    
+                if not isinstance(chunk['text'], str) or not isinstance(chunk['metadata'], dict):
+                    logger.warning(f"Invalid text/metadata format at index {chunk_idx} in {file_path}")
+                    continue
+                    
                 texts.append(chunk['text'])
                 # Filter complex metadata to avoid ChromaDB errors
                 clean_metadata = filter_complex_metadata(chunk['metadata'])
                 metadatas.append(clean_metadata)
                 # Extract chunk_id safely
-                chunk_id = str(chunk['metadata'].get('chunk_id', f"chunk_{len(ids)}"))
+                chunk_id = str(chunk['metadata'].get('chunk_id', f"chunk_{file_path}_{chunk_idx}"))
                 ids.append(chunk_id)
             
+            if not texts:
+                logger.warning(f"No valid chunks found in {file_path}")
+                return 0
+                
             logger.info(f"Adding {len(texts)} chunks to vector store from {file_path}")
             
             # Add chunks to vector store
