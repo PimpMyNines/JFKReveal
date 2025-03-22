@@ -1,0 +1,10 @@
+---
+description: Continuous Integration and Deployment Pipeline Management
+globs: 
+alwaysApply: false
+---
+# CI/CD
+
+- Always configure well architected GitHub actions for CI/CD
+- Always maintain consistency with other repositories in teh same organization when selecting actions.
+- Always use the Makefile, to ensure consistency with local development.

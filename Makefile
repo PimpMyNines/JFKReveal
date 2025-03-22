@@ -44,24 +44,33 @@ install:
 	$(PYTHON) -m pip install .
 
 install-dev:
-	$(PYTHON) -m pip install -e .
+	$(VENV)/bin/pip install -e .
 
 clean:
 	rm -rf build/
 	rm -rf dist/
 	rm -rf *.egg-info
 	rm -rf **/__pycache__/
+	rm -rf **/*.egg-info/
 	rm -rf .pytest_cache
 	rm -rf .coverage
 	rm -rf htmlcov
 	rm -rf .tox/
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*.pyd" -delete
 
-build:
+build: clean
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install --upgrade build
+	@echo "Building package with pyproject.toml configuration..."
 	$(PYTHON) -m build
+	@echo "\n==========================================================\n"
+	@echo "IMPORTANT: After installation, you'll need to download the"
+	@echo "spaCy language model with this command:"
+	@echo "python -m spacy download en_core_web_sm"
+	@echo "\n==========================================================\n"
 
 test:
 	$(VENV)/bin/python -m pytest
@@ -70,7 +79,7 @@ setup-ollama:
 	@mkdir -p tools
 	$(VENV)/bin/python tools/setup_ollama.py $(if $(MODEL),--model $(MODEL),)
 
-run:
+run: install-dev
 	$(eval ARGS := )
 	$(if $(SKIP_SCRAPING),$(eval ARGS += --skip-scraping))
 	$(if $(SKIP_PROCESSING),$(eval ARGS += --skip-processing))

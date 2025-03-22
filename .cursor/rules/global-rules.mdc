@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Global Instructions
+
+- Always include and use a well written Dockerfile for managing dependencies, testing, and running any code; for ensured consistency.
+- Always use a well written Makefile to aid in local development
+- Always keep files well organized
+- Always keep configurable values as environment variables.
+- Always verify your responses thoroughly before providing an answer.
+- Always ask questions before making changes, if more clarification is required.
+- Always respond with 1 function at a time, in its own code block; rather than all at once.

@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Claude Instructions
+
+- READ CLAUDE.md to find instructions, tasks, and next steps.
+- When the user prompts you to, "start work", you know this means to read CLAUDE.md and begin working on next steps.
+- Always record your progress using CLAUDE.md, as you make it
+- Always record your mistakes in CLAUDE.md with instructions to prevent other agents from making the same mistakes.
+- At 75% context capacity, inform the user and make your final updates to CLAUDE.md with instructions for the next agent to continue exactly where you left off.

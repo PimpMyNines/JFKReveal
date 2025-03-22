@@ -1,0 +1,50 @@
+{
+  "prefer_local": true,
+  "models": {
+    "embedding": {
+      "default": "nomic-embed-text",
+      "provider": "ollama",
+      "fallback": "text-embedding-3-large"
+    },
+    "document_analysis": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-4o"
+    },
+    "topic_analysis": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-4o"
+    },
+    "report_generation": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-4o"
+    },
+    "executive_summary": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-3.5-turbo"
+    },
+    "suspects_analysis": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-3.5-turbo"
+    },
+    "coverup_analysis": {
+      "default": "llama3",
+      "provider": "ollama",
+      "fallback": "gpt-3.5-turbo"
+    }
+  },
+  "report_configuration": {
+    "type": "standard",
+    "multi_model_enabled": false,
+    "models_to_compare": [
+      "gpt-4o",
+      "llama3",
+      "mistral"
+    ],
+    "consolidated_model": "gpt-4o"
+  }
+}
