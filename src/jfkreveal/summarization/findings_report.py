@@ -7,7 +7,7 @@ import logging
 import datetime
 from typing import List, Dict, Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts.chat import ChatPromptTemplate
@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 class ExecutiveSummaryResponse(BaseModel):
     """Executive summary response from LLM."""
+    model_config = ConfigDict(extra="ignore")  # Allow extra fields to be ignored during validation
+    
     overview: str = Field(..., description="Overview of key findings across all analyzed topics")
     significant_evidence: List[str] = Field(default_factory=list, description="Most significant evidence related to the assassination")
     potential_government_involvement: List[str] = Field(default_factory=list, description="Evidence of potential government involvement or coverup")
@@ -29,6 +31,8 @@ class ExecutiveSummaryResponse(BaseModel):
 
 class DetailedFindingsResponse(BaseModel):
     """Detailed findings response from LLM."""
+    model_config = ConfigDict(extra="ignore")  # Allow extra fields to be ignored during validation
+    
     topic_analyses: Dict[str, str] = Field(..., description="In-depth examination of each key topic")
     timeline: str = Field(..., description="Chronological timeline of events based on the documents")
     key_individuals: Dict[str, str] = Field(..., description="Roles and actions of key individuals and agencies")
@@ -42,6 +46,8 @@ class DetailedFindingsResponse(BaseModel):
 
 class SuspectsAnalysisResponse(BaseModel):
     """Suspects analysis response from LLM."""
+    model_config = ConfigDict(extra="ignore")  # Allow extra fields to be ignored during validation
+    
     primary_culprits: List[str] = Field(default_factory=list, description="Most likely primary culprit(s) based on document evidence")
     supporting_evidence: Dict[str, List[str]] = Field(..., description="Supporting evidence for primary culprits")
     evidence_strength: str = Field(..., description="Strength analysis of evidence against primary suspects")
@@ -53,6 +59,8 @@ class SuspectsAnalysisResponse(BaseModel):
 
 class CoverupAnalysisResponse(BaseModel):
     """Coverup analysis response from LLM."""
+    model_config = ConfigDict(extra="ignore")  # Allow extra fields to be ignored during validation
+    
     information_suppression: List[str] = Field(default_factory=list, description="Evidence of information suppression or tampering")
     redaction_patterns: Dict[str, Any] = Field(..., description="Patterns of redaction across documents")
     narrative_inconsistencies: List[str] = Field(default_factory=list, description="Inconsistencies in official narratives")

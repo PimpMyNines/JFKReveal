@@ -72,7 +72,7 @@ To publish updates to the GitHub Pages site, follow these steps:
 - ✅ Enhanced OCR for historical documents and added comprehensive tests
 - ✅ Fixed test_findings_report_models.py tests with proper LangChain structured output
 - ✅ Expanded integration tests to cover component interactions
-- ❌ E2E tests need proper handling for API credentials and rate limits
+- ✅ Fixed E2E tests with proper handling for API credentials and rate limits (2025-03-22)
 
 ### What to Do Next
 1. ✅ Fix document_analyzer.py unit tests by improving mocking approach
@@ -81,7 +81,7 @@ To publish updates to the GitHub Pages site, follow these steps:
 4. ✅ Add command-line control for OCR functionality (added --no-ocr, --ocr-resolution, --ocr-language options)
 5. ✅ Enhance text cleaning specifically for OCR artifacts from historical typewritten documents
 6. ✅ Add unit tests for OCR functionality to ensure proper extraction
-7. ✅ Fix the failing unit tests in test_findings_report_models.py with proper LangChain structured output
+7. ✅ Fixed failing unit tests in test_findings_report_models.py by adding extra field handling in Pydantic models
 8. ✅ Document OCR performance characteristics and quality/speed tradeoffs
 9. ✅ Add unit tests for parallel_processor.py and semantic_search.py modules
 10. ✅ Expand integration test coverage for key component interactions
@@ -91,6 +91,10 @@ To publish updates to the GitHub Pages site, follow these steps:
 14. Implement proper dependency injection for easier testing
 
 ## Progress Update
+- Fixed the failing tests in test_findings_report_models.py:
+  - Added extra field handling in Pydantic models using `extra="ignore"` in model config
+  - Updated to modern Pydantic v2 ConfigDict approach to remove deprecation warnings
+  - Improved model compatibility with LangChain structured outputs
 - Fixed the FindingsReport class implementation by adding the missing `_save_report_file` method
 - Simplified and aligned the `generate_executive_summary` and `generate_detailed_findings` methods with test expectations
 - Fixed document_analyzer.py tests by improving the mocking approach:
@@ -165,6 +169,16 @@ To publish updates to the GitHub Pages site, follow these steps:
   - Improved semantic_search.py code structure with _setup_reranker helper method
   - Added proper assertions and mock validation for complex search operations
   - Fixed pickling issues with thread locks by intelligently selecting appropriate executor
+
+- Fixed E2E tests with proper API credential and rate limit handling (2025-03-22):
+  - Implemented API key management fixture for tests
+  - Added rate limit handling with exponential backoff and retries
+  - Created smart credential detection with mock fallbacks
+  - Added comprehensive mocking for OpenAI and LangChain components
+  - Implemented test skip logic based on environment
+  - Created proper CI integration for GitHub Actions
+  - Added parallel test execution for maximum efficiency
+  - Documented test skip conditions for rate-limited APIs
 
 ## Code Organization Guide
 
